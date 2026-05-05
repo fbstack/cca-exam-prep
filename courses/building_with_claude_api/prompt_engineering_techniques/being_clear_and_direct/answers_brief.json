@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": "being_clear_and_direct_q001",
+    "correct_letter": "B",
+    "correct_explanation": "Without an explicit format instruction, Claude defaults to natural prose whose structure varies call-to-call based on the input content. A parser built on a rigid field-extraction pattern will silently succeed when the prose happens to match and silently fail when it doesn't, producing intermittent null values rather than a consistent error. Specifying an explicit output format (e.g., JSON with required keys) eliminates this structural variability.",
+    "distractor_explanations": {
+      "A": "Claude does not degrade in quality over repeated API calls; each call is stateless and independent. This invents a fictional drift mechanism that does not exist in the API.",
+      "C": "The parser is the wrong layer to fix\u2014retraining it on variable prose output treats the symptom while leaving the root cause (unspecified format) intact. Robust pipelines constrain the model's output format, not the downstream consumer.",
+      "D": "Truncation would cause consistent failures from the start, not a working system that degrades after a week with unchanged prompts. The delayed onset points to structural variability, not a size limit being hit."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q002",
+    "correct_letter": "C",
+    "correct_explanation": "Without explicit format constraints, Claude infers structure from context and may reasonably choose different layouts across calls\u2014varying field order, label names, or grouping. A downstream parser built on positional or label-based parsing breaks the moment that structure shifts. Explicit format instructions eliminate this variance by making the expected structure part of the contract, not an inference.",
+    "distractor_explanations": {
+      "A": "Token count is not a quality signal\u2014more tokens do not improve response accuracy or structure. This confuses output length with output reliability.",
+      "B": "Parsers do not adapt dynamically to evolving output structures; they are built against a fixed schema. Relying on Claude to choose a readable format transfers structural responsibility away from the engineer and onto runtime inference, which is precisely the failure mode explicit instructions prevent.",
+      "D": "Claude does not default to bulleted lists unconditionally\u2014it infers a format from context, which may be prose, tables, or lists depending on the prompt. The actual risk is inconsistency across calls, not a fixed bad default."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Dynamic audience injection applies the 'be clear and direct' principle at the architectural level: Claude cannot calibrate register without explicit context about who is reading, so the prompt must supply it. A single shared template with injected variables preserves maintainability while giving Claude the signal it needs to produce appropriately calibrated output for each segment.",
+    "distractor_explanations": {
+      "A": "Separate templates solve the immediate problem but create a maintenance divergence risk \u2014 any update to clause-explanation logic must be replicated across both templates, and the two will inevitably drift. This is template proliferation without architectural justification when dynamic injection achieves the same calibration from one canonical source.",
+      "C": "Claude does not infer intended audience from contract content complexity alone \u2014 it infers topic complexity. Without an explicit audience directive, Claude defaults to a generalist register, which is exactly the failure mode producing the churn. Relying on implicit signals leaves audience calibration undefined.",
+      "D": "Post-processing output for simplicity or density is a brittle downstream patch that doesn't address the root cause: Claude generating the wrong register in the first place. It adds latency, requires maintaining a second transformation layer, and produces lower-quality results than prompting correctly upstream."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q004",
+    "correct_letter": "B",
+    "correct_explanation": "Without audience context, Claude lacks the signal needed to calibrate register, so it defaults to a generic middle register \u2014 neither technical enough for the senior partner nor accessible enough for the law student. The scoring drop across both rubrics simultaneously confirms this: the unpopulated template failed both segments for the same underlying reason, not different reasons. Explicit audience context is the mechanism that drives register calibration in a shared template system.",
+    "distractor_explanations": {
+      "A": "The lab results show register shift through audience description alone \u2014 no role-play framing was required. Claiming Claude requires 'You are a legal tutor' framing contradicts the experimental evidence that populated audience slots produced adequate scores.",
+      "C": "This inverts the logic of the experiment. The rubrics were segment-specific precisely to detect register mismatches; a universal rubric would obscure the failure, not reveal that the generic prompt was actually adequate.",
+      "D": "The experiment only shows that an unpopulated shared template underperforms \u2014 it provides no comparison against fully independent templates. Inferring that dynamic injection is inherently inferior to separate templates is unsupported by the data."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q005",
+    "correct_letter": "B",
+    "correct_explanation": "In regulated environments, explicit negative constraints outperform positive scoping because they eliminate interpretive ambiguity \u2014 Claude cannot infer from 'focus on X' that Y is prohibited, only that Y is not prioritized. Pairing each prohibition with a scripted fallback removes Claude's discretion over deflection language, which is architecturally necessary when compliance auditors require consistent, documentable customer-facing responses. This two-part design (named prohibition + mandated fallback) closes both the scope gap and the output variability gap simultaneously.",
+    "distractor_explanations": {
+      "A": "Stronger positive scoping language still fails for the same architectural reason the original prompt failed: positive instructions define priority, not prohibition. A 9% drift rate caused by absent negative constraints will not be resolved by tightening the positive frame alone.",
+      "C": "Relying on Claude's autonomous refusal behavior introduces output variability that is unacceptable under regulatory scrutiny \u2014 the deflection wording becomes unpredictable across sessions. In compliance contexts, the fallback response itself is a controlled artifact that must be specified, not delegated.",
+      "D": "A post-processing filter treats the symptom without fixing the architectural defect in the prompt, leaving off-topic generation intact at the model layer. This approach also creates audit risk: regulators examining the system will find a prompt that affirmatively permits the behavior the filter is quietly suppressing."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q006",
+    "correct_letter": "B",
+    "correct_explanation": "The scripted fallback eliminates output variance at the enforcement boundary: a model-generated deflection might be contextually plausible but subtly undermine the constraint (e.g., 'I can't help with that here' implies scope rather than prohibition). The scripted response also produces a deterministic, auditable artifact \u2014 compliance reviewers and regulators can verify the exact language the system delivers, not a statistical approximation of it.",
+    "distractor_explanations": {
+      "A": "Aesthetic and UX arguments don't constitute architectural justifications \u2014 they describe a preference, not a structural property of the system. A compliance reviewer challenging functional necessity won't be satisfied by style.",
+      "C": "This overstates the failure mode: negative constraints don't simply collapse under strong user intent, and framing the fallback as 'the only reliable enforcement mechanism' misrepresents how constraint layers work together. The real justification is output determinism and auditability, not hallucination prevention.",
+      "D": "FINRA Rule 2210 governs communications standards and advertising, not scripted fallback requirements for AI refusal logic \u2014 this rule does not mandate the specific mechanism described. Citing a fabricated regulatory requirement as the architectural justification is both factually wrong and irrelevant to prompt design decisions."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Claude does not automatically decompose multi-part inputs into discrete sub-tasks unless instructed to do so. Without explicit structural guidance, it gravitates toward the most salient or first-encountered question rather than enumerating all parts. Adding a decomposition instruction forces Claude to treat identification of sub-questions as a required step before generating any response.",
+    "distractor_explanations": {
+      "A": "A 40-token system prompt with a multi-part ticket is far below any context limit, and the symptom is selective omission\u2014not truncation. Raising max_tokens has no effect on which questions Claude chooses to address.",
+      "C": "Claude is not applying an urgency-ranking heuristic; it is simply not enumerating sub-questions at all. Routing to human agents treats the symptom rather than fixing a solvable prompt-engineering gap.",
+      "D": "Persona definitions set tone and role framing, not response completeness logic. A 'helpful support agent' role does not instruct Claude to identify and iterate over all sub-questions, so partial responses would continue."
+    }
+  },
+  {
+    "question_id": "being_clear_and_direct_q008",
+    "correct_letter": "C",
+    "correct_explanation": "API token billing counts all generated tokens, including reasoning steps, regardless of whether post-processing removes them from the visible output. Stripping the enumeration step server-side reduces perceived response size but does not reduce the tokens Claude generated\u2014so the cost savings the proposal assumes do not materialize. The added post-processing pipeline introduces engineering overhead with no meaningful billing benefit over simply including the decomposition instructions and leaving the output intact.",
+    "distractor_explanations": {
+      "A": "This conflates visible output length with billable token count. Tokens are charged when generated by the model, not when displayed to the user, so stripping reasoning in post-processing does not eliminate that cost.",
+      "B": "The server-side vs. client-side distinction is irrelevant to token billing. Latency is a secondary concern, and neither deployment pattern changes the fact that the reasoning tokens were already generated and charged.",
+      "D": "Chain-of-thought instructions are fully supported in the system prompt; there is no API restriction requiring them to appear in the user turn. This fabricates a technical constraint that does not exist."
+    }
+  }
+]

@@ -1,0 +1,171 @@
+[
+  {
+    "id": "being_clear_and_direct_q001",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Whether to specify output format explicitly in the prompt or rely on Claude to infer an appropriate format from context",
+    "stem": "A product team launches a customer-facing API that sends Claude the prompt 'summarize this product' and passes the response to a downstream parser that extracts price, availability, and feature fields. In early testing the parser works correctly, but after a week in production the team starts seeing null values and misrouted data in their database. No prompt changes were made. What is the most likely root cause?",
+    "options": {
+      "A": "Claude's summarization quality degrades over repeated API calls and requires periodic prompt refreshing",
+      "B": "Without an explicit format instruction, Claude produces well-written prose that varies in structure across calls, causing the parser to silently misread or miss fields",
+      "C": "The downstream parser needs to be retrained on Claude's output style before it can reliably extract fields",
+      "D": "The product descriptions fed to Claude are too long, causing truncation that removes price and availability information"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "clearly-wrong",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q002",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to specify output format explicitly in the prompt or rely on Claude to infer an appropriate format from context",
+    "stem": "During the lab, you revised a vague prompt into one that explicitly defined output constraints for a downstream consumer. Your revised prompt specified field labels and structure rather than asking Claude to 'summarize' freely. A teammate reviews your work and suggests removing the format instructions to 'give Claude more room to write naturally.' What is the strongest argument for keeping the explicit format specification?",
+    "options": {
+      "A": "Explicit format instructions increase Claude's token usage, which improves response quality for complex product descriptions",
+      "B": "Removing format instructions allows Claude to choose the most readable structure, which downstream parsers can adapt to over time",
+      "C": "Without explicit format instructions, Claude will produce structurally inconsistent output across calls, breaking any parser that relies on predictable field placement",
+      "D": "Claude requires format instructions in every prompt or it defaults to a bulleted list that parsers cannot read"
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "clearly-wrong",
+      "B": "plausible misconception",
+      "C": "correct",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to include explicit audience and context in the prompt when the same prompt template serves multiple user segments",
+    "stem": "A legal-tech platform uses a single Claude prompt \u2014 'Explain this contract clause' \u2014 to serve both first-year law students and senior partners. The team is seeing churn from both segments: students find the output too jargon-heavy, while partners find it over-explained and patronizing. The engineering lead proposes solving this by injecting audience context dynamically into the prompt (e.g., 'Explain this clause to a first-year law student with no prior exposure to IP law'). A colleague argues this is unnecessary because Claude's default tone calibration should adapt to content complexity automatically. Which approach is most architecturally sound?",
+    "options": {
+      "A": "Maintain two entirely separate prompt templates \u2014 one tuned for law students and one for partners \u2014 so each segment gets independently optimized output without shared-template risk.",
+      "B": "Inject audience and context dynamically into a single shared template so Claude can calibrate register per user while the team maintains one canonical prompt.",
+      "C": "Rely on Claude's default tone calibration since the contract content itself contains implicit complexity signals that Claude will use to adjust its explanation depth.",
+      "D": "Add a post-processing layer that simplifies or densifies Claude's output after generation, avoiding any prompt changes to the stable production template."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to include explicit audience and context in the prompt when the same prompt template serves multiple user segments",
+    "stem": "In the prompt template you constructed during the lab, your dynamic injection slot allowed you to parameterize audience context before sending to Claude. Your score_response() function evaluated outputs against a rubric that penalized both over-explanation and unexplained jargon. When you ran the same base clause through the template without populating the audience slot, scores for both the 'law student' and 'senior partner' rubrics dropped significantly compared to when the slot was filled. What does this result most directly demonstrate about prompt design for multi-segment systems?",
+    "options": {
+      "A": "Claude requires explicit role-play framing (e.g., 'You are a legal tutor') rather than audience description to shift output register effectively.",
+      "B": "Explicit audience context in the prompt is necessary for Claude to calibrate response register \u2014 without it, output defaults to a middle register that underserves all segments.",
+      "C": "The scoring drop occurred because the rubric was segment-specific; a single universal rubric would have shown the generic prompt performing adequately for both groups.",
+      "D": "The result shows that separate prompt templates per segment are required, since a shared template with dynamic injection still scored lower than fully independent templates would."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q005",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Whether to add explicit negative constraints to a prompt or rely solely on positive instructions to bound Claude's behavior",
+    "stem": "A regional brokerage deploys Claude to handle customer inquiries about account balances, recent transactions, and statement downloads. The system prompt instructs Claude to 'focus exclusively on account data questions and provide accurate, helpful information.' During a compliance audit six months post-launch, the firm discovers that Claude has been responding to investment strategy questions with general market commentary in roughly 9% of sessions. The compliance officer argues that the prompt already implies a restriction by defining scope positively. The CTO disagrees and wants to redesign the prompt architecture. What is the most architecturally sound course of action given the firm's regulatory exposure?",
+    "options": {
+      "A": "Rewrite the positive instruction with stronger scoping language, such as 'you are exclusively a read-only account data assistant,' to make the intended boundary unambiguous without adding verbosity.",
+      "B": "Add explicit negative constraints naming the prohibited categories \u2014 investment advice, tax guidance, and product recommendations \u2014 and pair each constraint with a scripted fallback response Claude must deliver when those topics are raised.",
+      "C": "Add explicit negative constraints to the system prompt and rely on Claude's refusal behavior to generate an appropriate deflection, since prescribing exact fallback wording is unnecessary when the prohibition is clearly stated.",
+      "D": "Implement a post-processing content filter at the API layer to intercept off-topic responses before they reach customers, removing the need to modify the prompt at all."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q006",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Whether to add explicit negative constraints to a prompt or rely solely on positive instructions to bound Claude's behavior",
+    "stem": "During the lab's prompt revision exercise, you iterated on a system prompt by adding explicit negative constraints alongside positive instructions. Suppose you applied that same pattern to a financial services assistant and your revised system prompt now reads: 'Answer only questions about account balances and transaction history. Do not provide investment advice, tax guidance, or recommendations about financial products under any circumstances. If a customer raises any of these topics, respond with: I can only assist with account and transaction information. Please contact a licensed advisor for investment or tax questions.' A compliance reviewer approves the negative constraints but questions whether the scripted fallback sentence is necessary, arguing it duplicates what the prohibition already accomplishes. What is the strongest architectural justification for keeping the scripted fallback as written?",
+    "options": {
+      "A": "The scripted fallback is stylistically cleaner than a model-generated deflection and improves the user experience, which is sufficient reason to retain it in a customer-facing deployment.",
+      "B": "Without a scripted fallback, Claude might generate a contextually plausible but subtly non-compliant deflection \u2014 such as one that implies it could answer if asked differently \u2014 whereas the scripted response creates a deterministic, auditable artifact demonstrating the system was designed to refuse prohibited queries.",
+      "C": "The scripted fallback ensures Claude never hallucinates a refusal, since language models are known to ignore negative constraints when user intent is sufficiently strong, making the fallback the only reliable enforcement mechanism.",
+      "D": "Scripted fallbacks are required by FINRA Rule 2210 for any AI system that interacts with retail brokerage customers, so removing it would place the firm in direct regulatory violation regardless of what the negative constraints say.",
+      "distractor_types_note": "removed \u2014 field is separate"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to include step-by-step reasoning instruct",
+    "stem": "A SaaS support team notices that Claude consistently addresses only the billing portion of tickets that contain a billing question, a feature request, and a bug report in the same message. Their current system prompt is 40 tokens and provides no structural guidance. A product manager suggests that Claude should naturally handle all sub-questions since the answers are all present in the message. What is the most accurate explanation for why the partial responses are occurring, and what is the correct fix?",
+    "options": {
+      "A": "Claude is hitting a context length limit and truncating responses; the fix is to increase the max_tokens parameter in the API call.",
+      "B": "Claude does not consistently self-initiate enumeration of sub-questions without explicit instruction; the fix is to add decomposition instructions such as 'First identify all distinct questions, then address each in order.'",
+      "C": "Claude is correctly prioritizing the most urgent sub-question by default; the fix is to route multi-part tickets to human agents rather than adding prompt complexity.",
+      "D": "Claude defaults to the first sub-question because the prompt lacks a persona definition; adding a 'helpful support agent' role will cause it to address all parts."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "clearly-wrong",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "plausible misconception"
+    }
+  },
+  {
+    "id": "being_clear_and_direct_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to include step-by-step reasoning instruct",
+    "stem": "A teammate reviews your support-ticket prompt and proposes a hybrid approach: add explicit chain-of-thought decomposition instructions to the system prompt so Claude enumerates all sub-questions before answering, but then use post-processing to strip the enumeration step from the final response before sending it to the customer. The goal is to get complete answers while keeping the visible response clean and reducing perceived token costs. How should you evaluate this proposal?",
+    "options": {
+      "A": "Accept the proposal; stripping the reasoning in post-processing eliminates the token cost of decomposition while preserving response completeness.",
+      "B": "Accept the proposal only if the post-processing step is applied server-side, since client-side stripping introduces latency that offsets any token savings.",
+      "C": "Reject the proposal; the reasoning tokens are still charged whether or not they appear in the final output, so post-processing adds implementation complexity without meaningful cost savings compared to simply including the decomposition instructions directly.",
+      "D": "Reject the proposal; chain-of-thought instructions in the system prompt are not supported by the API and must be placed in the user turn to function correctly."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "near-miss",
+      "C": "correct",
+      "D": "clearly-wrong"
+    }
+  }
+]

@@ -28,10 +28,10 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 12,
-      "foundational": 2,
-      "intermediate": 5,
-      "architect": 5,
+      "questions_generated": 20,
+      "foundational": 4,
+      "intermediate": 9,
+      "architect": 7,
       "lessons_covered": [
         "being_clear_and_direct"
       ]
