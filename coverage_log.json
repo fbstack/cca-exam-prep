@@ -17,7 +17,7 @@
       "lessons_covered": []
     },
     "Claude Code Configuration": {
-      "exam_weight": 0.20,
+      "exam_weight": 0.2,
       "est_exam_questions": 12,
       "questions_generated": 0,
       "foundational": 0,
@@ -26,13 +26,15 @@
       "lessons_covered": []
     },
     "Prompt Engineering": {
-      "exam_weight": 0.20,
+      "exam_weight": 0.2,
       "est_exam_questions": 12,
       "questions_generated": 12,
       "foundational": 2,
       "intermediate": 5,
       "architect": 5,
-      "lessons_covered": ["being_clear_and_direct"]
+      "lessons_covered": [
+        "being_clear_and_direct"
+      ]
     },
     "Tool Design & MCP": {
       "exam_weight": 0.18,
@@ -50,7 +52,9 @@
       "foundational": 1,
       "intermediate": 2,
       "architect": 1,
-      "lessons_covered": ["being_clear_and_direct"]
+      "lessons_covered": [
+        "being_clear_and_direct"
+      ]
     }
   }
 }
