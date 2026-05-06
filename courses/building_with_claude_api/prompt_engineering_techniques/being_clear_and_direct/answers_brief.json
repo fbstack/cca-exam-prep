@@ -2,81 +2,81 @@
   {
     "question_id": "being_clear_and_direct_q001",
     "correct_letter": "B",
-    "correct_explanation": "Without an explicit format instruction, Claude defaults to natural prose whose structure varies call-to-call based on the input content. A parser built on a rigid field-extraction pattern will silently succeed when the prose happens to match and silently fail when it doesn't, producing intermittent null values rather than a consistent error. Specifying an explicit output format (e.g., JSON with required keys) eliminates this structural variability.",
+    "correct_explanation": "Explicit schema specification in the system prompt eliminates ambiguity by giving Claude a concrete, mandatory contract to fulfill on every call. When the exact field names, structure, and value types are declared, Claude has no basis to fall back on prose \u2014 the format requirement is unambiguous. This directly addresses the root cause: Claude was inferring format from context, which is probabilistic, not deterministic.",
     "distractor_explanations": {
-      "A": "Claude does not degrade in quality over repeated API calls; each call is stateless and independent. This invents a fictional drift mechanism that does not exist in the API.",
-      "C": "The parser is the wrong layer to fix\u2014retraining it on variable prose output treats the symptom while leaving the root cause (unspecified format) intact. Robust pipelines constrain the model's output format, not the downstream consumer.",
-      "D": "Truncation would cause consistent failures from the start, not a working system that degrades after a week with unchanged prompts. The delayed onset points to structural variability, not a size limit being hit."
+      "A": "Few-shot examples improve consistency but don't guarantee it \u2014 Claude can still deviate when a ticket is ambiguous or unusual. This is a probabilistic nudge, not a structural constraint, so the ~10% failure rate may shrink but won't reach zero.",
+      "C": "Vague instructions like 'structured format' leave the definition of structure entirely to Claude's inference, which is exactly the failure mode already occurring. Relying on a 'general tendency' accepts non-deterministic output for a system that requires deterministic output.",
+      "D": "Moving enforcement to the parser treats the symptom rather than the cause, and writing a parser that handles both JSON and arbitrary prose is a fragile, high-maintenance solution. It also means ticket data lost in malformed prose responses is never recovered."
     }
   },
   {
     "question_id": "being_clear_and_direct_q002",
-    "correct_letter": "C",
-    "correct_explanation": "Without explicit format constraints, Claude infers structure from context and may reasonably choose different layouts across calls\u2014varying field order, label names, or grouping. A downstream parser built on positional or label-based parsing breaks the moment that structure shifts. Explicit format instructions eliminate this variance by making the expected structure part of the contract, not an inference.",
+    "correct_letter": "B",
+    "correct_explanation": "When a prompt omits explicit format instructions, Claude infers a reasonable output format from context\u2014but 'reasonable' is not the same as 'consistent.' Without a specified schema, Claude may alternate between prose, partial JSON, or varied key naming across responses, producing outputs that are semantically correct but structurally unpredictable. Downstream parsers expecting a strict schema will break on any deviation from the expected structure.",
     "distractor_explanations": {
-      "A": "Token count is not a quality signal\u2014more tokens do not improve response accuracy or structure. This confuses output length with output reliability.",
-      "B": "Parsers do not adapt dynamically to evolving output structures; they are built against a fixed schema. Relying on Claude to choose a readable format transfers structural responsibility away from the engineer and onto runtime inference, which is precisely the failure mode explicit instructions prevent.",
-      "D": "Claude does not default to bulleted lists unconditionally\u2014it infers a format from context, which may be prose, tables, or lists depending on the prompt. The actual risk is inconsistency across calls, not a fixed bad default."
+      "A": "Non-determinism describes variability in content or reasoning, not format. The failure here is not that Claude occasionally produces a wrong answer after retries\u2014it is that the prompt never constrained the output structure in the first place, making inconsistent formatting the expected outcome, not an anomaly.",
+      "C": "The parser is not the failure point; it is correctly enforcing the contract the pipeline was designed around. Relaxing the parser to accept free-form prose shifts the problem downstream and does not fix the root cause, which is an underspecified prompt.",
+      "D": "Few-shot examples are one way to guide output format, but explicit format instructions in the system or user prompt are sufficient and often more reliable. The claim that few-shot examples are always required overstates the constraint and misidentifies the actual fix."
     }
   },
   {
     "question_id": "being_clear_and_direct_q003",
     "correct_letter": "B",
-    "correct_explanation": "Dynamic audience injection applies the 'be clear and direct' principle at the architectural level: Claude cannot calibrate register without explicit context about who is reading, so the prompt must supply it. A single shared template with injected variables preserves maintainability while giving Claude the signal it needs to produce appropriately calibrated output for each segment.",
+    "correct_explanation": "Dynamically injecting expertise level as an explicit constraint gives Claude the specific signal it needs to calibrate vocabulary, depth, and assumed knowledge on every request. This approach scales across the full user spectrum without template proliferation, and explicit constraints outperform implicit reliance on Claude's defaults when audience variation is wide and high-stakes.",
     "distractor_explanations": {
-      "A": "Separate templates solve the immediate problem but create a maintenance divergence risk \u2014 any update to clause-explanation logic must be replicated across both templates, and the two will inevitably drift. This is template proliferation without architectural justification when dynamic injection achieves the same calibration from one canonical source.",
-      "C": "Claude does not infer intended audience from contract content complexity alone \u2014 it infers topic complexity. Without an explicit audience directive, Claude defaults to a generalist register, which is exactly the failure mode producing the churn. Relying on implicit signals leaves audience calibration undefined.",
-      "D": "Post-processing output for simplicity or density is a brittle downstream patch that doesn't address the root cause: Claude generating the wrong register in the first place. It adds latency, requires maintaining a second transformation layer, and produces lower-quality results than prompting correctly upstream."
+      "A": "Separate templates solve the calibration problem but fail on scalability \u2014 a binary novice/expert split doesn't accommodate the full spectrum of users, and maintaining multiple templates multiplies update overhead whenever the feature changes.",
+      "C": "Instructing Claude to 'explain clearly' without audience context leaves calibration entirely to default behavior, which has no signal to distinguish a confused novice from a condescending response to an engineer \u2014 the exact failure mode the team is already experiencing.",
+      "D": "Appending a glossary shifts the cognitive burden onto the user rather than resolving the calibration mismatch in the prompt itself; the core explanation remains mis-targeted for both audiences, and novices are still exposed to confusing language before they reach the glossary."
     }
   },
   {
     "question_id": "being_clear_and_direct_q004",
     "correct_letter": "B",
-    "correct_explanation": "Without audience context, Claude lacks the signal needed to calibrate register, so it defaults to a generic middle register \u2014 neither technical enough for the senior partner nor accessible enough for the law student. The scoring drop across both rubrics simultaneously confirms this: the unpopulated template failed both segments for the same underlying reason, not different reasons. Explicit audience context is the mechanism that drives register calibration in a shared template system.",
+    "correct_explanation": "Explicit audience constraints act as an early-binding signal that sets the register before Claude interprets the content of the request. Without it, Claude defaults to a middle-ground tone calibrated to an imagined average user, which systematically undershoots for experts and overshoots for novices. The variable injection eliminates that ambiguity by making audience a first-class input rather than an inference.",
     "distractor_explanations": {
-      "A": "The lab results show register shift through audience description alone \u2014 no role-play framing was required. Claiming Claude requires 'You are a legal tutor' framing contradicts the experimental evidence that populated audience slots produced adequate scores.",
-      "C": "This inverts the logic of the experiment. The rubrics were segment-specific precisely to detect register mismatches; a universal rubric would obscure the failure, not reveal that the generic prompt was actually adequate.",
-      "D": "The experiment only shows that an unpopulated shared template underperforms \u2014 it provides no comparison against fully independent templates. Inferring that dynamic injection is inherently inferior to separate templates is unsupported by the data."
+      "A": "This frames the decision as a cost-accuracy tradeoff, but token count is not the reason to keep the placeholder\u2014the failure mode is register mismatch, not accuracy loss. Framing it as a cost argument misidentifies the architectural problem the placeholder solves.",
+      "C": "Claude's inference from question phrasing is unreliable when the phrasing is neutral or when the same question could come from users at different expertise levels. Treating the placeholder as documentation-only ignores that it is a functional calibration signal, as your own A/B test demonstrated.",
+      "D": "No Claude content policy requires prompts to declare an intended audience for explanatory content. This fabricates a compliance rationale that does not exist."
     }
   },
   {
     "question_id": "being_clear_and_direct_q005",
     "correct_letter": "B",
-    "correct_explanation": "In regulated environments, explicit negative constraints outperform positive scoping because they eliminate interpretive ambiguity \u2014 Claude cannot infer from 'focus on X' that Y is prohibited, only that Y is not prioritized. Pairing each prohibition with a scripted fallback removes Claude's discretion over deflection language, which is architecturally necessary when compliance auditors require consistent, documentable customer-facing responses. This two-part design (named prohibition + mandated fallback) closes both the scope gap and the output variability gap simultaneously.",
+    "correct_explanation": "Positive instructions define the intended output space but don't reliably suppress behaviors Claude has strong generalized tendencies toward\u2014like inferring intent from context. Speculative language is a specific failure mode that requires an explicit negative constraint to block, because the model can satisfy 'summarize only what is stated' while still inserting interpretive framing it judges as helpful. Pairing positive and negative instructions closes this gap by targeting the failure mode directly.",
     "distractor_explanations": {
-      "A": "Stronger positive scoping language still fails for the same architectural reason the original prompt failed: positive instructions define priority, not prohibition. A 9% drift rate caused by absent negative constraints will not be resolved by tightening the positive frame alone.",
-      "C": "Relying on Claude's autonomous refusal behavior introduces output variability that is unacceptable under regulatory scrutiny \u2014 the deflection wording becomes unpredictable across sessions. In compliance contexts, the fallback response itself is a controlled artifact that must be specified, not delegated.",
-      "D": "A post-processing filter treats the symptom without fixing the architectural defect in the prompt, leaving off-topic generation intact at the model layer. This approach also creates audit risk: regulators examining the system will find a prompt that affirmatively permits the behavior the filter is quietly suppressing."
+      "A": "Increasing specificity in the positive instruction alone is a near-miss: it narrows the target behavior but still doesn't explicitly prohibit the failure mode. Claude can interpret 'verbatim facts and agreed terms' as compatible with brief interpretive glosses, leaving the speculation problem intact.",
+      "C": "Formatting emphasis and instruction placement don't address the underlying cause of the failure. Claude isn't deprioritizing the instruction because it's buried\u2014it's producing speculative language because no constraint prohibits it.",
+      "D": "Replacing positive instructions entirely with prohibitions removes the affirmative behavioral target, leaving Claude without clear guidance on what a correct summary looks like. Effective prompts use both: positive instructions to define the goal, negative constraints to block specific failure modes."
     }
   },
   {
     "question_id": "being_clear_and_direct_q006",
     "correct_letter": "B",
-    "correct_explanation": "The scripted fallback eliminates output variance at the enforcement boundary: a model-generated deflection might be contextually plausible but subtly undermine the constraint (e.g., 'I can't help with that here' implies scope rather than prohibition). The scripted response also produces a deterministic, auditable artifact \u2014 compliance reviewers and regulators can verify the exact language the system delivers, not a statistical approximation of it.",
+    "correct_explanation": "Positive instructions define the target behavior but leave the solution space open\u2014Claude's generalized capabilities (like inferring intent) can still activate on edge cases because nothing explicitly blocks them. The negative constraint closes that gap by directly prohibiting the specific failure mode the rubric detected. This is why v2 passed: it didn't just reinforce what to do, it suppressed a competing behavior.",
     "distractor_explanations": {
-      "A": "Aesthetic and UX arguments don't constitute architectural justifications \u2014 they describe a preference, not a structural property of the system. A compliance reviewer challenging functional necessity won't be satisfied by style.",
-      "C": "This overstates the failure mode: negative constraints don't simply collapse under strong user intent, and framing the fallback as 'the only reliable enforcement mechanism' misrepresents how constraint layers work together. The real justification is output determinism and auditability, not hallucination prevention.",
-      "D": "FINRA Rule 2210 governs communications standards and advertising, not scripted fallback requirements for AI refusal logic \u2014 this rule does not mandate the specific mechanism described. Citing a fabricated regulatory requirement as the architectural justification is both factually wrong and irrelevant to prompt design decisions."
+      "A": "This overgeneralizes from one lab result to a universal rule. The lab demonstrates that negative constraints fixed a specific failure mode in this domain\u2014it does not establish that positive-only prompts always fail across all domains.",
+      "C": "The rubric flagged speculation in v1 and passed v2 after the constraint was added\u2014this is consistent behavior, not unreliability. Attributing the change to rubric sensitivity rather than prompt improvement inverts the actual causal relationship.",
+      "D": "The improvement is attributable to the type of instruction added (a targeted constraint), not prompt length. Longer prompts with irrelevant additions would not fix a specific edge-case failure mode."
     }
   },
   {
     "question_id": "being_clear_and_direct_q007",
     "correct_letter": "B",
-    "correct_explanation": "Claude does not automatically decompose multi-part inputs into discrete sub-tasks unless instructed to do so. Without explicit structural guidance, it gravitates toward the most salient or first-encountered question rather than enumerating all parts. Adding a decomposition instruction forces Claude to treat identification of sub-questions as a required step before generating any response.",
+    "correct_explanation": "The root failure is rule proliferation without a conflict-resolution mechanism\u201447 flat rules with no priority ordering guarantee future collisions as edge cases multiply. Refactoring into a principled hierarchy gives Claude an explicit reasoning framework to adjudicate novel conflicts without requiring exhaustive enumeration. This treats the architectural problem (missing priority semantics) rather than the symptom (one specific rule pair).",
     "distractor_explanations": {
-      "A": "A 40-token system prompt with a multi-part ticket is far below any context limit, and the symptom is selective omission\u2014not truncation. Raising max_tokens has no effect on which questions Claude chooses to address.",
-      "C": "Claude is not applying an urgency-ranking heuristic; it is simply not enumerating sub-questions at all. Routing to human agents treats the symptom rather than fixing a solvable prompt-engineering gap.",
-      "D": "Persona definitions set tone and role framing, not response completeness logic. A 'helpful support agent' role does not instruct Claude to identify and iterate over all sub-questions, so partial responses would continue."
+      "A": "Adding rule 48 perpetuates the exact failure mode: each new rule is a patch that creates new potential conflicts with the existing 47, compounding the combinatorial explosion rather than resolving it.",
+      "C": "Replacing rules with examples shifts the conflict from explicit rules to implicit, unauditable learned behavior\u2014this makes regulatory compliance harder to demonstrate and conflict detection impossible, not easier.",
+      "D": "Parallel single-rule classifiers produce vote aggregation across contradictory signals with no principled resolution mechanism; the architectural conflict is displaced into the aggregation layer, not eliminated."
     }
   },
   {
     "question_id": "being_clear_and_direct_q008",
-    "correct_letter": "C",
-    "correct_explanation": "API token billing counts all generated tokens, including reasoning steps, regardless of whether post-processing removes them from the visible output. Stripping the enumeration step server-side reduces perceived response size but does not reduce the tokens Claude generated\u2014so the cost savings the proposal assumes do not materialize. The added post-processing pipeline introduces engineering overhead with no meaningful billing benefit over simply including the decomposition instructions and leaving the output intact.",
+    "correct_letter": "B",
+    "correct_explanation": "The failure mode is constraint conflict, not missing examples or insufficient exploration \u2014 Claude has no principled basis for choosing between two rules that contradict each other on the same input. An explicit priority hierarchy encodes the resolution logic directly in the prompt architecture, so Claude applies a consistent, generalizable decision rule rather than making arbitrary or index-ordered choices. This addresses the root cause: the constraint block lacks a conflict-resolution mechanism.",
     "distractor_explanations": {
-      "A": "This conflates visible output length with billable token count. Tokens are charged when generated by the model, not when displayed to the user, so stripping reasoning in post-processing does not eliminate that cost.",
-      "B": "The server-side vs. client-side distinction is irrelevant to token billing. Latency is a secondary concern, and neither deployment pattern changes the fact that the reasoning tokens were already generated and charged.",
-      "D": "Chain-of-thought instructions are fully supported in the system prompt; there is no API restriction requiring them to appear in the user turn. This fabricates a technical constraint that does not exist."
+      "A": "Temperature controls sampling randomness, not rule-following logic \u2014 raising it makes output less deterministic but does nothing to resolve the structural ambiguity between conflicting constraints. This treats a prompt architecture problem as a decoding parameter problem.",
+      "C": "Flagging conflicts instead of resolving them shifts the failure from silent to visible but doesn't fix it \u2014 downstream code still receives unresolved outputs, and score_response() will continue to degrade. This converts a resolution problem into an escalation problem without addressing the architectural gap.",
+      "D": "Adding per-conflict examples encodes resolutions implicitly and requires a new example every time a new conflict surfaces, making the prompt brittle and O(n) in discovered edge cases. It treats the symptom rather than the structural absence of a priority hierarchy, so previously unseen conflicts remain unresolved."
     }
   }
 ]
