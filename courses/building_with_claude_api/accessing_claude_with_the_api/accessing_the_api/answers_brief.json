@@ -2,41 +2,81 @@
   {
     "question_id": "accessing_the_api_q001",
     "correct_letter": "B",
-    "correct_explanation": "JavaScript bundles are fully readable by any user via browser dev tools, and HTTPS traffic can be inspected by the requester themselves \u2014 there is no technical barrier to extracting an embedded API key. Once extracted, the key grants unrestricted API access billed to the owner with no way to scope requests, rate-limit per user, or distinguish legitimate traffic from abuse. A server-side proxy keeps the key out of the client entirely and adds the only enforcement layer that can validate requests before forwarding them to Anthropic.",
+    "correct_explanation": "Client-side JavaScript is fully visible to any user via browser devtools, source inspection, or network tab\u2014embedding an API key there is equivalent to publishing it publicly. Any third party can extract the key and make authenticated requests on your account. API keys must live exclusively on a server-side layer that the browser never directly sees.",
     "distractor_explanations": {
-      "A": "Key rotation without a frontend redeploy is a real operational benefit, but it is a secondary convenience \u2014 not the primary security requirement. The core problem is unauthorized access by any user who can read the bundle, which rotation alone does not prevent.",
-      "C": "Build-time environment variables are injected as plaintext strings into the compiled bundle before it is served to the browser, making them just as exposed as a hardcoded string. The distinction between 'environment variable' and 'hardcoded' is a development-time concept that disappears at the output artifact level.",
-      "D": "The Anthropic API does not enforce same-origin restrictions \u2014 browsers can make cross-origin requests to it directly. The prohibition on client-side keys is a security policy, not an API-enforced technical restriction."
+      "A": "Spending caps mitigate the financial damage after a key is compromised but do not prevent the key extraction itself\u2014the root cause. This is a recovery control, not a prevention of the architectural exposure.",
+      "C": "The Anthropic API does not offer domain-scoped or origin-restricted API keys; this feature does not exist. Even if it did, a key visible in a client bundle is already extracted before any origin check occurs.",
+      "D": "Modern browsers enforce HTTPS for most API endpoints, and the scenario gives no indication HTTP was used. The key was extracted from the bundle itself, not intercepted in transit\u2014HTTPS is irrelevant to static asset inspection."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q004",
+    "correct_letter": "C",
+    "correct_explanation": "Formatting variance is a prompt specification problem: Claude defaults to context-appropriate formatting when no constraints are given, producing inconsistent output across varied inputs. Adding explicit format instructions to the system prompt enforces a consistent output contract on every request, regardless of ticket content. This is the correct intervention because it controls structure at the generation stage, before output reaches the rendering layer.",
+    "distractor_explanations": {
+      "A": "Streaming controls token delivery order to the client, not output structure or length \u2014 the model still generates the same variable-format content, just incrementally. Stopping consumption mid-stream truncates output arbitrarily rather than enforcing a format.",
+      "B": "Capping `max_tokens` truncates responses at a token count but does not enforce plain-text format, required sections, or consistent structure \u2014 a response can still be markdown-formatted and structurally inconsistent within the cap.",
+      "D": "Passing a prior response as an assistant turn creates an implicit formatting hint but provides no guaranteed contract \u2014 Claude may still diverge in structure across different ticket inputs, especially as content complexity changes."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Explicit negative constraints directly address the root cause: Claude's default behavior is to provide helpful context, so without instructions to suppress it, elaboration is expected. Specifying that the consumer is an automated pipeline further signals that conversational output is inappropriate, reinforcing the format constraint. This eliminates ambiguity in the instruction set rather than patching around it downstream.",
+    "distractor_explanations": {
+      "A": "This is a brittle workaround that treats the symptom, not the cause \u2014 if Claude's verbose output changes structure or uses synonyms, the regex breaks silently. The moderation decision can still be dropped or misclassified without fixing the prompt.",
+      "C": "Temperature controls sampling randomness, not instruction-following behavior. Verbosity here is driven by Claude defaulting to a helpful explanatory register, which persists across temperature settings.",
+      "D": "Instruction-following models handle single-token output tasks correctly when given explicit format constraints \u2014 the failure is a prompt engineering gap, not an architectural limitation. Replacing the model discards the system's flexibility without addressing the actual problem."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q008",
+    "correct_letter": "B",
+    "correct_explanation": "Claude does not reliably infer format constraints from role assignment alone \u2014 explicit negative constraints (no explanations, automated audience) must be stated directly to suppress verbose output in a zero-tolerance pipeline. A classifier role tells Claude what to do, but without explicit prohibitions, it retains latitude to add context it judges helpful. Separating role/taxonomy definition from format enforcement is the failure point this architecture must close.",
+    "distractor_explanations": {
+      "A": "The failure mode here is conflating persistence with sufficiency \u2014 a system prompt persists but only enforces what it explicitly states. Role-framing alone does not carry implicit format constraints, so omitting explicit prohibitions leaves behavioral variance in the output.",
+      "C": "Structured output parameters constrain schema shape, not natural-language verbosity within a field. Mixing prompt-based and API-level controls is not conflicting \u2014 they operate on different layers \u2014 and dropping prompt constraints leaves format behavior underspecified.",
+      "D": "System prompt length does not correlate with hallucinated labels; taxonomy enumeration in the prompt actually reduces label drift by anchoring Claude to the defined set. Keeping the prompt artificially short to avoid hallucination sacrifices the constraint enforcement the pipeline depends on."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q009",
+    "correct_letter": "B",
+    "correct_explanation": "Progressive summarization addresses the root cause directly: it compresses information density for older turns rather than discarding them, preserving the original complaint and key dispute facts across arbitrarily long sessions. The running summary holds critical continuity (what the user originally reported) while full message fidelity for recent turns maintains conversational coherence. Token consumption grows logarithmically rather than linearly, satisfying the cost constraint.",
+    "distractor_explanations": {
+      "A": "Upgrading to a larger context model is cost-additive for every session, not just the 23% that exceed 40 turns, violating the cost constraint. It also defers rather than solves the problem \u2014 sufficiently long sessions will still exhaust even a larger window.",
+      "C": "Raising the truncation threshold from 15 to 30 retained turns delays the failure point without eliminating it; sessions that run 60+ turns will reproduce the exact same re-explanation problem. This is a threshold adjustment, not an architectural fix to unbounded context growth.",
+      "D": "Semantic retrieval fetches turns similar to the current message, but billing disputes require chronological narrative continuity \u2014 the original complaint may be semantically distant from the current negotiation step and never retrieved. This approach trades structural context coherence for keyword relevance, introducing new failure modes rather than fixing the existing one."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q010",
+    "correct_letter": "A",
+    "correct_explanation": "Summarization-before-eviction preserves semantic continuity by converting discarded turns into a persistent context artifact that travels forward in the conversation window. The summary sits at index 0 as a stable reference, so critical facts like the account number remain accessible regardless of how many turns have been pruned. This is the standard architectural pattern for unbounded multi-turn sessions: compress what you lose rather than silently dropping it.",
+    "distractor_explanations": {
+      "B": "Token-counting improves efficiency but is purely a deferral strategy \u2014 it delays the problem rather than solving it. Once the 80% threshold triggers truncation, the same critical-context loss at turn 3 still occurs.",
+      "C": "Storing history in a database preserves data durability but provides zero benefit to the model, which only sees the 20-turn slice passed to the API. The model cannot infer an account number it was never given in the current request.",
+      "D": "max_tokens controls the length of the model's output, not the size of the input context window. Increasing it has no effect on how many tokens the request can contain and does not address context overflow."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q002",
+    "correct_letter": "B",
+    "correct_explanation": "Any secret embedded in a client-side JavaScript bundle is effectively public: users can read it via DevTools, network inspection, or source extraction in seconds. An exposed API key grants the finder full, unrestricted access to the team's Anthropic account\u2014running up costs, exhausting rate limits, or exfiltrating data. Keeping the key in a server-side environment variable (as the lab's `os.environ` pattern demonstrates) means the credential never leaves infrastructure the team controls.",
+    "distractor_explanations": {
+      "A": "The `system` parameter is a standard JSON field in the request body, and browsers can set arbitrary JSON fields in a `fetch()` POST request. There is no API restriction that blocks `system` from client-side calls.",
+      "C": "Server-side proxies do not write to the browser's local storage\u2014that is a client-side browser API entirely unrelated to where the proxy runs. Caching Claude responses to reduce token costs would require a server-side cache (e.g., Redis), not local storage.",
+      "D": "The Anthropic API does not unconditionally block CORS; CORS behavior depends on the server's response headers, not an absolute prohibition on browser requests. While CORS can be a practical hurdle, it is configurable and is not the core security justification for the proxy pattern."
     }
   },
   {
     "question_id": "accessing_the_api_q003",
     "correct_letter": "B",
-    "correct_explanation": "The system prompt is the canonical place to define persistent behavioral contracts \u2014 format, length, tone, and audience \u2014 because it applies uniformly to every interaction without per-request overhead or fragmentation. The root cause here is an underspecified system prompt that leaves Claude to infer output shape from query complexity alone, producing the observed variance. Adding explicit constraints eliminates the ambiguity at the source rather than patching symptoms downstream.",
+    "correct_explanation": "System prompt constraints are applied universally on every request, making them the correct architectural layer for enforcing output contracts that downstream systems depend on. By specifying word count, plain-text format, required sections, and audience context in the system prompt, the model produces compliant output before post-processing is ever needed. This eliminates the root cause \u2014 variable output structure \u2014 rather than patching symptoms downstream.",
     "distractor_explanations": {
-      "A": "Prepending instructions per user message distributes a system-level concern across every request, creating fragmentation: any message that bypasses the injection layer loses the constraint, and it adds latency and complexity without fixing the underspecified system prompt.",
-      "C": "The retry loop treats a prompt engineering failure as a runtime correction problem, doubling latency on long responses and adding brittle logic \u2014 it does not teach Claude what the desired format is, so variance persists and the loop fires unpredictably.",
-      "D": "Fine-tuning is disproportionate for a formatting problem solvable with prompt constraints, requires curated training data and retraining cycles, and loses the ability to adjust behavior without another fine-tuning run \u2014 the wrong tool for a runtime specification problem."
-    }
-  },
-  {
-    "question_id": "accessing_the_api_q004",
-    "correct_letter": "B",
-    "correct_explanation": "Format inconsistency originates in the system prompt's lack of explicit constraints\u2014Claude infers format from context when none are provided, producing variable output. Specifying sentence count, prose style, and reading level in the system prompt establishes a consistent behavioral contract applied to every request before any user message is processed. This addresses the root cause rather than patching symptoms downstream.",
-    "distractor_explanations": {
-      "A": "Temperature controls output randomness, not response length or formatting style. Setting temperature=0 makes token selection deterministic but does nothing to constrain structure, prose format, or length variance.",
-      "C": "Retry logic patches inconsistent output after the fact rather than preventing it. This adds latency, increases API costs, and still produces non-conforming first responses that must be discarded.",
-      "D": "max_tokens imposes a hard token ceiling that truncates responses mid-sentence on complex queries rather than shaping appropriate length. It also does nothing to suppress markdown or standardize prose format."
-    }
-  },
-  {
-    "question_id": "accessing_the_api_q009",
-    "correct_letter": "A",
-    "correct_explanation": "Streaming solves the abandonment problem at the architectural root: it breaks the synchronous block-and-deliver model so the client renders tokens as they arrive, delivering visible output within ~1 second regardless of total response length. The data shows users abandon between 8-12 seconds waiting for a blank screen to resolve \u2014 streaming collapses that perceived wait to near-zero. No UI trick achieves this because the actual latency is unchanged; streaming changes the delivery contract itself.",
-    "distractor_explanations": {
-      "B": "Spinners and placeholders mask latency without reducing it \u2014 users still wait 8-12 seconds for real content, which is exactly the abandonment window the data identifies. UI affordances raise tolerance slightly but cannot overcome a 10-second blank response window.",
-      "C": "Capping max_tokens degrades the product to paper over an architectural problem \u2014 the writing assistant's value depends on 500-1500 token outputs, and synchronous delivery of even 300 tokens can exceed 5 seconds under load. This trades product quality for a workaround that doesn't scale.",
-      "D": "A WebSocket connection that still buffers the full response before forwarding eliminates HTTP overhead but preserves the full synchronous wait \u2014 the client still receives nothing until generation is complete. This conflates transport-layer optimization with streaming, which is an application-layer concern."
+      "A": "Placing format constraints in the user-turn prompt introduces per-request variability and requires every caller to correctly replicate the constraints \u2014 a fragile contract that breaks when tickets are submitted without them. System-level invariants belong in the system prompt, not the user turn.",
+      "C": "Temperature controls output randomness and creativity, not structural formatting or length. Lowering temperature does not prevent Claude from generating markdown or long responses when the prompt provides no explicit format constraints.",
+      "D": "Sentence-boundary truncation improves coherence at the cut point but leaves the root cause \u2014 unconstrained variable-length markdown output \u2014 completely intact. Executives still receive summaries of arbitrary length and structure; the fix only makes the overflow slightly less jarring."
     }
   }
 ]

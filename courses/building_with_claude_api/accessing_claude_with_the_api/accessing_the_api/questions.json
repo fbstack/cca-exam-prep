@@ -1,16 +1,16 @@
 [
   {
     "id": "accessing_the_api_q001",
-    "domain": "Claude Code Configuration",
+    "domain": "Production Architecture & Reliability",
     "difficulty": "foundational",
     "type": "theory",
-    "decision_source": "Whether to expose your Anthropic API key directly in client-side code or route all API calls through a server-side proxy",
-    "stem": "A startup is launching a customer-facing web chat application powered by Claude. To ship quickly, the frontend engineer proposes embedding the Anthropic API key directly in the JavaScript bundle so the browser can call the Anthropic API without a backend. The security lead pushes back and insists all API calls must be routed through a server-side proxy instead. What is the primary reason the server-side proxy approach is required for production deployments?",
+    "decision_source": "Whether to call the Anthropic API directly from client-side JavaScript or route all API calls through a server-side proxy",
+    "stem": "A startup's frontend developer ships a web chat application that calls the Anthropic API directly from the browser, embedding the API key in the JavaScript bundle to avoid standing up a backend. Within 48 hours, the team receives an alert about a billing spike 40x above their normal usage. A post-incident review confirms the key was extracted from the bundle by a third party. What architectural decision caused this failure?",
     "options": {
-      "A": "A server-side proxy allows the team to rotate the API key without redeploying the frontend, which is the main operational advantage over client-side storage.",
-      "B": "Any user can inspect the JavaScript bundle or intercept network requests to extract the embedded key, allowing them to make API calls billed to the owner with no access controls.",
-      "C": "Environment variables injected at build time are compiled into the JavaScript bundle the same way a hardcoded string is, so neither approach exposes the key to end users.",
-      "D": "Routing requests through a proxy adds a network hop that increases latency, but it is required because the Anthropic API enforces same-origin restrictions that block direct browser requests."
+      "A": "The team failed to set a hard spending cap in the Anthropic console before launch, which would have blocked unauthorized usage",
+      "B": "The API key was exposed in the client-side bundle, making it publicly accessible to anyone who inspects the browser's network traffic or source",
+      "C": "The team should have used a restricted API key scoped to their application's domain to prevent cross-origin usage",
+      "D": "The frontend made requests without HTTPS, allowing the key to be intercepted in transit"
     },
     "correct": "B",
     "distractor_types": {
@@ -21,17 +21,38 @@
     }
   },
   {
+    "id": "accessing_the_api_q002",
+    "domain": "Production Architecture & Reliability",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to call the Anthropic API directly from client-side JavaScript or route all API calls through a server-side proxy",
+    "stem": "Your team is building a customer-facing web app that uses Claude to summarize support tickets. A frontend engineer proposes calling the Anthropic API directly from the browser using a JavaScript `fetch()` request, embedding the API key in the client-side bundle to avoid the latency of an extra server hop. The backend engineer argues all Claude calls should be routed through a server-side proxy, similar to how Starter Cell 1 in the lab keeps the key in `os.environ` rather than in code the client ever touches. Which architectural concern most directly justifies the backend engineer's position?",
+    "options": {
+      "A": "Browser-based API calls cannot set the `system` parameter, so the summarization prompt would be silently ignored by Claude",
+      "B": "Embedding the API key in a client-side bundle exposes it to any user who inspects the network traffic or JavaScript source, enabling unrestricted use of the team's account",
+      "C": "Routing through a server-side proxy allows the backend to cache Claude responses in the browser's local storage, reducing per-request token costs",
+      "D": "Direct browser calls to the Anthropic API violate CORS policy unconditionally, causing every request to fail regardless of how the key is stored"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
     "id": "accessing_the_api_q003",
     "domain": "Prompt Engineering",
     "difficulty": "intermediate",
     "type": "theory",
-    "decision_source": "Whether to specify explicit format, length, and audience constraints in a system prompt or rely on Claude to infer appropriate defaults from a brief task description",
-    "stem": "A SaaS company deploys Claude as a customer support assistant with the system prompt: 'You are a helpful customer support agent.' Within two weeks, the support team reports that responses range from a single sentence to six-paragraph essays depending on query complexity, breaking the UI card layout and generating customer complaints about verbosity. The engineering lead proposes adding a retry loop that detects responses exceeding 150 words and re-prompts Claude to shorten them. What is the most architecturally sound response to this problem?",
+    "decision_source": "Whether to specify explicit output format instructions in a prompt or rely on Claude's default formatting behavior",
+    "stem": "A team ships a customer support summarization tool that feeds Claude-generated briefings into an executive dashboard. The dashboard renders a fixed 200-word card with no markdown support. During QA, the team notices that short tickets produce two-sentence responses while complex tickets produce 600-word markdown reports with headers and bullet points \u2014 some responses render correctly, others overflow their containers or display raw asterisks. The team already has a post-processing normalization layer that strips markdown and truncates to 200 words, but the layer is still producing failures because truncation mid-sentence creates incoherent summaries that executives are complaining about. A junior engineer argues the inconsistency will resolve itself once real tickets are submitted, since Claude will 'learn' the expected style from usage patterns. What is the most architecturally sound resolution to the root cause of these failures?",
     "options": {
-      "A": "Prepend a formatting instruction to every user message at the application layer \u2014 for example, 'Reply in 2-3 sentences.' \u2014 so that length constraints are enforced per request without modifying the shared system prompt.",
-      "B": "Add explicit constraints to the system prompt specifying maximum response length, tone, reading level, and output structure so Claude has no ambiguity about expected format.",
-      "C": "Implement the retry loop as proposed \u2014 Claude will converge on the correct length after one reformatting pass without requiring prompt changes.",
-      "D": "Fine-tune a model on a curated set of approved support responses so that consistent length and tone become an inherent behavioral property rather than a runtime instruction."
+      "A": "Move the format instructions to the user-turn prompt so they can be tuned per ticket type without modifying the system prompt.",
+      "B": "Add explicit format constraints to the system prompt specifying maximum word count, plain-text only, required sections, and the executive audience \u2014 applied uniformly to every request.",
+      "C": "Lower the model temperature so that output length and structure become more predictable across varying ticket lengths.",
+      "D": "Replace the post-processing truncation logic with a sentence-boundary detection algorithm so summaries always end at a complete sentence."
     },
     "correct": "B",
     "distractor_types": {
@@ -46,34 +67,97 @@
     "domain": "Prompt Engineering",
     "difficulty": "intermediate",
     "type": "lab",
-    "decision_source": "Whether to specify explicit format, length, and audience constraints in a system prompt or rely on Claude to infer appropriate defaults from a brief task description",
-    "stem": "In the lab, you initialized the Anthropic client and passed a system prompt to the `messages.create()` call. You are now testing a customer support assistant. When you pass `system='You are a helpful customer support agent.'` and send five different user queries ranging from simple to complex, you observe that the `content[0].text` responses vary significantly in length and occasionally include markdown formatting. Which change to your `messages.create()` call most directly resolves the inconsistency at the source?",
+    "decision_source": "Whether to specify explicit output format instructions in a prompt or rely on Claude's default formatting behavior",
+    "stem": "In the lab, you called `client.messages.create()` with a system prompt and a user message containing a raw support ticket. You observed that responses varied significantly in length and structure across different ticket inputs \u2014 some returned plain sentences, others returned markdown bullet lists. You are now extending this into a production summarization pipeline where output is rendered inside a fixed-width plain-text email template. Which change to your `client.messages.create()` call most directly resolves the formatting variance for this production requirement?",
     "options": {
-      "A": "Add `temperature=0` to the `messages.create()` call to make outputs deterministic and eliminate length variance.",
-      "B": "Update the `system` parameter to explicitly state the maximum number of sentences, prohibit markdown, specify plain prose, and define the target reading level for all responses.",
-      "C": "Wrap the `messages.create()` call in a loop that checks `len(content[0].text)` and retries with an appended instruction if the response exceeds a threshold.",
-      "D": "Set `max_tokens=150` to establish a consistent response ceiling across all query types."
+      "A": "Add `stream=True` to the `client.messages.create()` call so the rendering layer can stop consuming tokens once the 200-word limit is reached.",
+      "B": "Set `max_tokens` to a low value in `client.messages.create()` so responses are physically capped before they can exceed the email template's length limit.",
+      "C": "Update the `system` parameter in `client.messages.create()` to explicitly specify plain-text format, maximum word count, required sections, and target audience \u2014 ensuring every response conforms to the email template regardless of ticket content.",
+      "D": "Pass the previous response back in the `messages` array as an assistant turn so Claude can reference the format it used last time and replicate it."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "clearly wrong",
+      "B": "plausible misconception",
+      "C": "correct",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "accessing_the_api_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to include explicit persona, audience, and negative constraints in a prompt or rely on a minimal instruction set for a content moderation classifier",
+    "stem": "A platform's content moderation pipeline sends user-generated posts to Claude with the prompt 'Classify this post as safe, borderline, or violating.' During QA, engineers observe that roughly 8% of responses include explanatory sentences like 'This post appears borderline \u2014 it mentions sensitive topics but does not explicitly violate guidelines' instead of a single token. The downstream parser throws an exception on any response that is not exactly one of the three enumerated values, silently dropping the moderation decision. What is the most effective prompt engineering change to eliminate this failure mode?",
+    "options": {
+      "A": "Add a post-processing regex extractor that scans Claude's free-text response and pulls the first matching taxonomy term, removing the need to change the prompt.",
+      "B": "Extend the prompt with explicit negative constraints ('respond only with one of: safe, borderline, violating \u2014 no explanations, no questions, no other text') and specify that the output is consumed by an automated pipeline, not a human reader.",
+      "C": "Lower the model's temperature to reduce output variance, since a more deterministic sampling process will naturally suppress verbose responses.",
+      "D": "Replace Claude with a fine-tuned classification model trained on the three-label taxonomy, because instruction-following models are architecturally unsuited to single-token output tasks."
     },
     "correct": "B",
     "distractor_types": {
-      "A": "plausible misconception",
+      "A": "near-miss",
       "B": "correct",
-      "C": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "accessing_the_api_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to include explicit persona, audience, and negative constraints in a prompt or rely on a minimal instruction set for a content moderation classifier",
+    "stem": "In the lab, you initialized the Anthropic client and constructed API calls with an explicit system prompt passed as the 'system' parameter. Your team is now building a content moderation classifier and debates whether the system prompt alone \u2014 set once at client initialization \u2014 is sufficient to prevent Claude from returning explanatory text alongside the classification label. A colleague argues that because the system prompt persists across every call in the session, repeating format constraints in each user message is redundant overhead. What is the most accurate assessment of this approach for a zero-tolerance classification pipeline?",
+    "options": {
+      "A": "The colleague is correct: a well-written system prompt is architecturally equivalent to per-message constraints, and repeating instructions increases token cost with no reliability benefit.",
+      "B": "The system prompt should define the classifier role and enumerated taxonomy, but explicit negative constraints \u2014 prohibiting explanations and specifying automated-pipeline audience \u2014 must also appear in the system prompt to reliably suppress verbose output; relying on implicit inference from role alone is insufficient.",
+      "C": "Format constraints should be omitted from the system prompt entirely and enforced exclusively through the structured output API parameter, because mixing prompt-based and API-level controls creates conflicting instructions.",
+      "D": "Passing a longer system prompt increases the likelihood that Claude will hallucinate category labels outside the defined taxonomy, so the system prompt should remain as short as possible."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
       "D": "clearly wrong"
     }
   },
   {
     "id": "accessing_the_api_q009",
-    "domain": "Production Architecture & Reliability",
-    "difficulty": "intermediate",
+    "domain": "Context Management",
+    "difficulty": "architect",
     "type": "theory",
-    "decision_source": "Whether to design the five-step request lifecycle with synchronous blocking calls or implement streaming to progressively deliver Claude's response to end users",
-    "stem": "A consumer-facing writing assistant generates responses between 500 and 1500 tokens. During beta testing, the team observes that 34% of users close the tab before seeing any output, and session recordings confirm most abandonment occurs between the 8 and 12 second mark \u2014 before the full response has loaded. The product manager proposes adding a spinner animation and an optimistic placeholder ('Your content is being generated...') to signal progress. What is the most architecturally sound response to the abandonment problem?",
+    "decision_source": "How to manage conversation history length in a multi-turn chat application to prevent context window exhaustion without losing critical conversational continuity",
+    "stem": "A customer support platform deploys a Claude-powered bot that handles complex billing disputes. Post-launch telemetry shows that 23% of sessions exceeding 40 turns result in the bot asking users to re-explain their original complaint \u2014 a problem not observed in QA testing, which capped sessions at 15 turns. Engineering determines the bot is hitting token limits and the oldest messages are being dropped from the conversation array. The product team demands a fix that preserves resolution quality without significantly increasing per-session cost. Which architectural approach best addresses the root cause while satisfying both constraints?",
     "options": {
-      "A": "Implement response streaming so the first tokens reach the client within one second, reducing perceived wait time regardless of total response length.",
-      "B": "Add the spinner and placeholder UI as proposed \u2014 users who see activity indicators are significantly less likely to abandon than users who see a blank screen.",
-      "C": "Reduce max_tokens to cap responses at 300 tokens, which brings synchronous delivery time under the 5-second threshold users tolerate.",
-      "D": "Establish a persistent WebSocket connection to the server but continue buffering the full response before forwarding it to the client, eliminating HTTP overhead without requiring streaming changes in the application layer."
+      "A": "Switch all sessions to the largest available context window model, eliminating token limit errors regardless of conversation length",
+      "B": "Implement progressive summarization: compress older conversation segments into a running summary injected at the top of context, retaining full message fidelity only for recent turns",
+      "C": "Increase the truncation threshold so the system retains the last 30 turns instead of 15, giving the model more recent context before messages are dropped",
+      "D": "Add a retrieval step that stores all messages in a vector database and fetches the top-k most semantically similar past turns at each new message"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "accessing_the_api_q010",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "How to manage conversation history length in a multi-turn chat application to prevent context window exhaustion without losing critical conversational continuity",
+    "stem": "In the multi-turn conversation exercise you built, your conversation_history list is passed directly into the messages parameter on each API call. During load testing you simulate a 60-turn support session and observe an API error indicating the request exceeds the model's context window. You add a guard that slices conversation_history to the last 20 entries before each call. In a follow-up test, the bot correctly handles turn 55 but asks the user at turn 56 to confirm their account number \u2014 information the user provided at turn 3, which is now outside the retained window. What is the most architecturally sound fix that preserves the integrity of the multi-turn loop you constructed?",
+    "options": {
+      "A": "Before slicing conversation_history, make a separate API call to Claude asking it to summarize the entries about to be removed, then prepend that summary as a system-level user message at index 0 of the retained history",
+      "B": "Replace the slice with a token-counting check: count tokens in conversation_history before each call and only truncate if the count exceeds 80% of the model's limit, preserving more turns on average",
+      "C": "Store the full conversation_history in a database and pass only the last 20 turns to the API; rely on the model to infer missing context from the recent turns it does receive",
+      "D": "Increase max_tokens in your API call parameters to give the model more room to generate longer responses, which will reduce the frequency of context overflow errors"
     },
     "correct": "A",
     "distractor_types": {
