@@ -10,10 +10,10 @@
     "Agentic Architecture": {
       "exam_weight": 0.27,
       "est_exam_questions": 16,
-      "questions_generated": 3,
+      "questions_generated": 5,
       "foundational": 0,
-      "intermediate": 2,
-      "architect": 1,
+      "intermediate": 3,
+      "architect": 2,
       "lessons_covered": [
         "accessing_the_api",
         "getting_an_api_key"

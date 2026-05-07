@@ -2,21 +2,21 @@
   {
     "question_id": "getting_an_api_key_q003",
     "correct_letter": "B",
-    "correct_explanation": "Each `Anthropic()` instantiation creates a new underlying HTTP client with its own connection pool, consuming OS file descriptors. At 400 concurrent requests, descriptor exhaustion occurs faster than the OS reclaims closed connections, producing intermittent errors. A single module-level client reuses a shared connection pool, eliminating this resource leak.",
+    "correct_explanation": "A factory function that actively fetches the correct key based on execution environment makes the key selection logic explicit and deterministic, eliminating reliance on whatever key happens to be in the environment. Passing the resolved key directly to the `Anthropic()` constructor removes the implicit discovery step that allowed the misconfiguration to go undetected. This shifts the failure mode from silent (wrong key used transparently) to loud (secrets manager lookup fails or returns nothing for an unrecognized environment).",
     "distractor_explanations": {
-      "A": "Reading from `os.environ` is a thread-safe dictionary lookup, not a source of race conditions. Caching the key changes nothing about connection pool creation, so descriptor exhaustion continues unchanged.",
-      "C": "The Anthropic client is stateless with respect to individual requests\u2014concurrent calls do not share mutable per-request state. This inverts the correct fix by prescribing per-request instantiation, which is precisely the pattern causing the exhaustion.",
-      "D": "The `Anthropic()` constructor is a lightweight object initialization, not a blocking I/O operation that would stall the event loop. Wrapping it in `asyncio.to_thread()` adds overhead without addressing the connection pool proliferation."
+      "A": "Validating the key prefix at call time still relies on implicit discovery to populate the key in the first place\u2014the same misconfiguration that caused the incident would pass or fail the assertion based on prefix format, not environment correctness. This detects some mismatches but does not prevent the root cause: uncontrolled ambient key injection.",
+      "C": "Explicitly calling `os.getenv('ANTHROPIC_API_KEY')` makes the source visible but changes nothing about the underlying mechanism\u2014the SDK already reads that same variable implicitly. The staging Lambda's misconfigured environment variable still silently overrides with the production key.",
+      "D": "Rotating keys after deployment limits blast radius of a future breach but does not prevent a misconfigured environment from picking up the wrong key. The root cause\u2014uncontrolled environment variable inheritance\u2014remains fully intact after rotation."
     }
   },
   {
     "question_id": "getting_an_api_key_q005",
     "correct_letter": "B",
-    "correct_explanation": "The fail-fast principle requires that a service validate all external dependencies\u2014including credentials\u2014before reporting itself healthy to the orchestrator. By skipping a startup None-check on the API key, the service passed its readiness probe and entered rotation in a permanently broken state, converting a deployment error into 100% request failure. The correct fix is to assert the key's presence at initialization and exit non-zero so Kubernetes never marks the pod ready.",
+    "correct_explanation": "API keys are displayed only once at creation time, so any design that loses the key value before it is durably stored creates an unrecoverable secret. Treating the Secrets Manager write as atomic to key creation enforces a transactional boundary: either both the key and its stored secret exist, or neither does. Deleting the key on write failure and surfacing a hard error forces a clean retry from a known-good state, eliminating any window where a live key exists without a retrievable secret.",
     "distractor_explanations": {
-      "A": "This misidentifies the failure layer: the root problem is that the pod was admitted to traffic at all, not how it signaled degradation after the fact. Liveness probes restart crashed pods; they don't retroactively prevent a misconfigured pod from receiving its first requests.",
-      "C": "The probe interval is irrelevant here because no probe was ever going to detect this failure\u2014the readiness probe checked liveness, not credential validity. A shorter interval still probes the wrong thing and admits the broken pod.",
-      "D": "The scenario explicitly states the environment variable is absent entirely, not empty. An absent variable yields None in Python, not an empty string, so this encoding explanation contradicts the given facts and invents a failure mode not present in the scenario."
+      "A": "Encryption at rest mitigates exposure risk but does not eliminate it \u2014 a plaintext secret still transits through a log pipeline and replay system, expanding the attack surface. The fundamental failure mode is persisting a secret outside its intended vault, which encryption does not fix.",
+      "C": "A dead-letter queue holding the raw key value is a durable secret leak: the key now lives in a message queue indefinitely, outside Secrets Manager's access controls and audit trail. Eventual consistency is inappropriate when the data being replicated is a one-time-visible credential.",
+      "D": "Alerting an operator to manually copy the key reintroduces human handling of a plaintext credential, violating the principle of least exposure and breaking the automation contract. This also creates an undefined window where the provisioning job is blocked waiting for human action."
     }
   }
 ]

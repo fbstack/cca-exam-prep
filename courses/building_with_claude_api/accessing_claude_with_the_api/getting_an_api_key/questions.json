@@ -4,13 +4,13 @@
     "domain": "Production Architecture & Reliability",
     "difficulty": "intermediate",
     "type": "theory",
-    "decision_source": "When should you instantiate a single shared Anthropic client versus creating a new client per request in a multi-user service?",
-    "stem": "A FastAPI service handling 400 concurrent users begins throwing intermittent connection errors under peak load. A code review reveals that each request handler calls `Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))` at the top of its function body before making any API call. The infrastructure team has ruled out network and Anthropic-side rate limiting as causes. What is the most likely root cause, and what is the correct fix?",
+    "decision_source": "Whether to pass the API key explicitly to the Anthropic client constructor or rely on implicit environment variable lookup by the SDK.",
+    "stem": "A SaaS platform deploys Claude-powered features across three environments: local development, a staging Lambda, and a production Lambda. Each environment uses a distinct Anthropic API key stored in that environment's variable store. The team initializes the SDK client using `Anthropic()` with no arguments in all three environments, relying on the SDK's automatic ANTHROPIC_API_KEY discovery. During an incident review, the team discovers that a misconfigured staging Lambda was silently using the production API key for two weeks, billing requests to the wrong account. Which architectural change would most directly prevent this class of failure?",
     "options": {
-      "A": "The API key is being read from the environment on every request, introducing race conditions in os.environ; fix by caching the key in a module-level variable and passing it explicitly.",
-      "B": "Each request instantiates a new HTTP session and connection pool, exhausting OS file descriptors faster than they can be reclaimed; fix by instantiating a single Anthropic client at application startup and sharing it across all handlers.",
-      "C": "The Anthropic client is not thread-safe when shared across concurrent requests; each handler must create its own isolated client instance to prevent state corruption.",
-      "D": "FastAPI's async event loop conflicts with the synchronous Anthropic client constructor; fix by wrapping each instantiation in `asyncio.to_thread()` to avoid blocking."
+      "A": "Add runtime assertions that validate the key prefix matches the expected environment before each API call.",
+      "B": "Use a factory function that retrieves the correct key from a secrets manager based on the execution environment and passes it explicitly to the `Anthropic()` constructor.",
+      "C": "Replace `Anthropic()` with `Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))` in every instantiation so the source of the key is visible in code.",
+      "D": "Rotate all three API keys immediately after each deployment to limit the blast radius of any future misconfiguration."
     },
     "correct": "B",
     "distractor_types": {
@@ -25,19 +25,19 @@
     "domain": "Production Architecture & Reliability",
     "difficulty": "architect",
     "type": "theory",
-    "decision_source": "How should API key availability be validated at service startup versus at request time in a production deployment?",
-    "stem": "A containerized microservice wrapping the Anthropic API is deployed to a Kubernetes cluster with readiness and liveness probes configured. The team ships a new release and discovers the ANTHROPIC_API_KEY secret was not mounted into the new pod \u2014 the environment variable is absent entirely. The service starts successfully, passes its readiness probe, and begins receiving production traffic. Every inbound request fails with an SDK AuthenticationError within 200ms. What is the primary architectural failure that allowed this outcome?",
+    "decision_source": "How to handle the one-time display of an API key at creation time in an automated provisioning workflow.",
+    "stem": "A platform engineering team is building an automated tenant provisioning pipeline. The pipeline programmatically creates an Anthropic API key via the Console, then must store it in AWS Secrets Manager before the new tenant environment is considered live. During a load test, the Secrets Manager write occasionally times out after the key has been created. The team proposes retrying the write asynchronously \u2014 capturing the key value in a log entry so it can be replayed if the retry worker restarts. What is the most architecturally sound response to this failure mode?",
     "options": {
-      "A": "The SDK's AuthenticationError was not caught and re-raised as an HTTP 503, so the orchestrator's liveness probe never detected the degraded state and removed the pod from rotation.",
-      "B": "The service performed no explicit None-check on the API key at startup, so it reported healthy to the orchestrator despite being permanently unable to authenticate, turning a deployment misconfiguration into a runtime failure affecting every user request.",
-      "C": "The readiness probe interval was too long, allowing a window where the unready pod accepted traffic before the probe could detect the authentication failures and mark the pod unready.",
-      "D": "The Kubernetes secret was not Base64-encoded correctly, which caused the environment variable to be injected as an empty string rather than None, bypassing the SDK's own startup validation."
+      "A": "Accept the async retry design but encrypt the log entry at rest so the key is protected during the replay window.",
+      "B": "Treat the Secrets Manager write as an atomic requirement of key creation: if the write fails, immediately delete the newly created key and surface a hard failure to the provisioning caller, requiring the entire operation to be retried from scratch.",
+      "C": "Implement a dead-letter queue that holds the key value until the Secrets Manager write succeeds, ensuring eventual consistency without blocking the provisioning flow.",
+      "D": "Switch to a synchronous retry loop with exponential backoff on the Secrets Manager write; if all retries are exhausted, alert an operator to manually copy the key before the provisioning job exits."
     },
     "correct": "B",
     "distractor_types": {
-      "A": "near-miss",
+      "A": "plausible misconception",
       "B": "correct",
-      "C": "plausible misconception",
+      "C": "near-miss",
       "D": "clearly wrong"
     }
   }
