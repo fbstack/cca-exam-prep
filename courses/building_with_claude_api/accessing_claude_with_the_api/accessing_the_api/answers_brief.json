@@ -1,0 +1,22 @@
+[
+  {
+    "question_id": "accessing_the_api_q005",
+    "correct_letter": "B",
+    "correct_explanation": "The problem is instruction drift caused by user framing competing with system-level authority. Explicitly asserting that user messages cannot override evaluation criteria reinforces the system prompt's hierarchical authority, while the human-turn prefix acts as a behavioral anchor that fires before Claude processes the potentially manipulative content. This layered approach addresses both the authority boundary and the recency effect of user framing without restructuring the prompt.",
+    "distractor_explanations": {
+      "A": "XML structuring improves parsing clarity but does not establish an authority boundary\u2014Claude can still treat user framing as a valid modifier of how it applies those tagged categories. The failure mode is structural cosmetics without behavioral enforcement.",
+      "C": "Temperature controls output variance, not instruction priority. A deterministic Claude will still consistently defer to user framing if no authority boundary is established; this confuses sampling behavior with prompt hierarchy.",
+      "D": "Moving the rubric to the human turn strips it of system-level authority and makes it co-equal with user content, worsening the contamination problem rather than fixing it. Proximity in the context window does not compensate for lost hierarchical standing."
+    }
+  },
+  {
+    "question_id": "accessing_the_api_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Decomposing into five sequential calls with defined input/output contracts enforces step-level isolation: a failed risk classification is caught before it poisons behavioral extraction, each step can be retried independently to eliminate 3x latency spikes, and the escalation step receives a fully formed summary as its sole input rather than generating it and deciding simultaneously. This architectural principle\u2014bounded context per call\u2014directly neutralizes all three failure modes: error propagation, conflated logic, and cascading restarts.",
+    "distractor_explanations": {
+      "A": "Chain-of-thought makes intermediate results visible but does not create retry boundaries\u2014a tool failure still restarts the entire call, and risk classification errors still corrupt downstream reasoning because all steps share the same inference pass.",
+      "C": "Grouping steps into two calls still conflates classification with retrieval and signal extraction with summary generation, so error isolation is incomplete; the escalation decision remains bundled inside the second call's generation context, leaving the logic-conflation failure mode unresolved.",
+      "D": "Rerunning the full monolithic prompt on schema failure treats the symptom rather than the cause\u2014it adds latency without preventing upstream errors from silently corrupting downstream outputs, and lower temperature reduces variance without enforcing the logic separation needed for consistent escalation decisions."
+    }
+  }
+]
