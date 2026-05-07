@@ -1,0 +1,44 @@
+[
+  {
+    "id": "getting_an_api_key_q003",
+    "domain": "Production Architecture & Reliability",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "When should you instantiate a single shared Anthropic client versus creating a new client per request in a multi-user service?",
+    "stem": "A FastAPI service handling 400 concurrent users begins throwing intermittent connection errors under peak load. A code review reveals that each request handler calls `Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))` at the top of its function body before making any API call. The infrastructure team has ruled out network and Anthropic-side rate limiting as causes. What is the most likely root cause, and what is the correct fix?",
+    "options": {
+      "A": "The API key is being read from the environment on every request, introducing race conditions in os.environ; fix by caching the key in a module-level variable and passing it explicitly.",
+      "B": "Each request instantiates a new HTTP session and connection pool, exhausting OS file descriptors faster than they can be reclaimed; fix by instantiating a single Anthropic client at application startup and sharing it across all handlers.",
+      "C": "The Anthropic client is not thread-safe when shared across concurrent requests; each handler must create its own isolated client instance to prevent state corruption.",
+      "D": "FastAPI's async event loop conflicts with the synchronous Anthropic client constructor; fix by wrapping each instantiation in `asyncio.to_thread()` to avoid blocking."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "getting_an_api_key_q005",
+    "domain": "Production Architecture & Reliability",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "How should API key availability be validated at service startup versus at request time in a production deployment?",
+    "stem": "A containerized microservice wrapping the Anthropic API is deployed to a Kubernetes cluster with readiness and liveness probes configured. The team ships a new release and discovers the ANTHROPIC_API_KEY secret was not mounted into the new pod \u2014 the environment variable is absent entirely. The service starts successfully, passes its readiness probe, and begins receiving production traffic. Every inbound request fails with an SDK AuthenticationError within 200ms. What is the primary architectural failure that allowed this outcome?",
+    "options": {
+      "A": "The SDK's AuthenticationError was not caught and re-raised as an HTTP 503, so the orchestrator's liveness probe never detected the degraded state and removed the pod from rotation.",
+      "B": "The service performed no explicit None-check on the API key at startup, so it reported healthy to the orchestrator despite being permanently unable to authenticate, turning a deployment misconfiguration into a runtime failure affecting every user request.",
+      "C": "The readiness probe interval was too long, allowing a window where the unready pod accepted traffic before the probe could detect the authentication failures and mark the pod unready.",
+      "D": "The Kubernetes secret was not Base64-encoded correctly, which caused the environment variable to be injected as an empty string rather than None, bypassing the SDK's own startup validation."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  }
+]

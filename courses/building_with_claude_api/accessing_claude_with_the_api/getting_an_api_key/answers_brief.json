@@ -1,0 +1,22 @@
+[
+  {
+    "question_id": "getting_an_api_key_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Each `Anthropic()` instantiation creates a new underlying HTTP client with its own connection pool, consuming OS file descriptors. At 400 concurrent requests, descriptor exhaustion occurs faster than the OS reclaims closed connections, producing intermittent errors. A single module-level client reuses a shared connection pool, eliminating this resource leak.",
+    "distractor_explanations": {
+      "A": "Reading from `os.environ` is a thread-safe dictionary lookup, not a source of race conditions. Caching the key changes nothing about connection pool creation, so descriptor exhaustion continues unchanged.",
+      "C": "The Anthropic client is stateless with respect to individual requests\u2014concurrent calls do not share mutable per-request state. This inverts the correct fix by prescribing per-request instantiation, which is precisely the pattern causing the exhaustion.",
+      "D": "The `Anthropic()` constructor is a lightweight object initialization, not a blocking I/O operation that would stall the event loop. Wrapping it in `asyncio.to_thread()` adds overhead without addressing the connection pool proliferation."
+    }
+  },
+  {
+    "question_id": "getting_an_api_key_q005",
+    "correct_letter": "B",
+    "correct_explanation": "The fail-fast principle requires that a service validate all external dependencies\u2014including credentials\u2014before reporting itself healthy to the orchestrator. By skipping a startup None-check on the API key, the service passed its readiness probe and entered rotation in a permanently broken state, converting a deployment error into 100% request failure. The correct fix is to assert the key's presence at initialization and exit non-zero so Kubernetes never marks the pod ready.",
+    "distractor_explanations": {
+      "A": "This misidentifies the failure layer: the root problem is that the pod was admitted to traffic at all, not how it signaled degradation after the fact. Liveness probes restart crashed pods; they don't retroactively prevent a misconfigured pod from receiving its first requests.",
+      "C": "The probe interval is irrelevant here because no probe was ever going to detect this failure\u2014the readiness probe checked liveness, not credential validity. A shorter interval still probes the wrong thing and admits the broken pod.",
+      "D": "The scenario explicitly states the environment variable is absent entirely, not empty. An absent variable yields None in Python, not an empty string, so this encoding explanation contradicts the given facts and invents a failure mode not present in the scenario."
+    }
+  }
+]

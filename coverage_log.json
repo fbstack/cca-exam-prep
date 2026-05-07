@@ -10,12 +10,13 @@
     "Agentic Architecture": {
       "exam_weight": 0.27,
       "est_exam_questions": 16,
-      "questions_generated": 1,
+      "questions_generated": 3,
       "foundational": 0,
-      "intermediate": 1,
-      "architect": 0,
+      "intermediate": 2,
+      "architect": 1,
       "lessons_covered": [
-        "accessing_the_api"
+        "accessing_the_api",
+        "getting_an_api_key"
       ]
     },
     "Claude Code Configuration": {

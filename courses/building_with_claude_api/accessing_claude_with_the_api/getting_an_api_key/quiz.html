@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCA Quiz — Getting an API Key</title>
+<style>
+  /* ── Reset and base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #f8f9fa;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 680px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .header {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .header h1 { font-size: 1.1rem; font-weight: 600; color: #111; margin-bottom: 3px; }
+  .header p { font-size: 0.8rem; color: #6b7280; }
+
+  /* ── Progress ── */
+  .progress-wrap {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .progress-label { font-size: 0.8rem; color: #6b7280; white-space: nowrap; }
+  .bar-track {
+    flex: 1; height: 6px;
+    background: #f3f4f6;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: #10b981;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .score-text { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+
+  /* ── Question card ── */
+  .card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid;
+    font-weight: 500;
+  }
+  .badge-domain { background: #ede9fe; color: #4c1d95; border-color: #c4b5fd; }
+  .badge-found { background: #dbeafe; color: #1e3a8a; border-color: #93c5fd; }
+  .badge-inter { background: #fef9c3; color: #713f12; border-color: #fde047; }
+  .badge-arch { background: #fce7f3; color: #831843; border-color: #f9a8d4; }
+  .badge-type { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+  .q-num { font-size: 0.8rem; font-weight: 600; color: #6b7280; }
+
+  .stem {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: #111;
+    margin-bottom: 1.1rem;
+  }
+
+  /* ── Options ── */
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .opt-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    line-height: 1.5;
+    transition: background 0.15s, border-color 0.15s;
+    width: 100%;
+  }
+  .opt-btn:hover:not(:disabled) { background: #f9fafb; border-color: #d1d5db; }
+  .opt-letter { font-weight: 600; min-width: 18px; color: #6b7280; flex-shrink: 0; }
+  .opt-btn.correct { background: #d1fae5; border-color: #10b981; }
+  .opt-btn.correct .opt-letter { color: #065f46; }
+  .opt-btn.wrong { background: #fee2e2; border-color: #ef4444; }
+  .opt-btn.wrong .opt-letter { color: #991b1b; }
+  .opt-btn:disabled { cursor: default; }
+
+  /* ── Explanation area ── */
+  .explanation {
+    margin-top: 14px;
+    display: none;
+  }
+  .explanation.show { display: block; }
+
+  .brief-exp {
+    padding: 10px 12px;
+    background: #f0fdf4;
+    border-left: 3px solid #10b981;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: #1a1a1a;
+    margin-bottom: 10px;
+  }
+
+  .detail-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .detail-btn {
+    padding: 6px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: #374151;
+    transition: background 0.15s;
+  }
+  .detail-btn:hover { background: #f9fafb; }
+  .detail-btn.active { background: #ede9fe; border-color: #a78bfa; color: #4c1d95; }
+
+  .detail-content {
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: #1a1a1a;
+    display: none;
+  }
+  .detail-content.show { display: block; }
+  .architect-content { background: #ede9fe; }
+  .novice-content { background: #fff7ed; }
+
+  /* ── Navigation ── */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  .nav-btn {
+    padding: 8px 18px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.875rem;
+    cursor: pointer;
+    color: #1a1a1a;
+  }
+  .nav-btn:hover { background: #f9fafb; }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .q-counter { font-size: 0.8rem; color: #6b7280; }
+
+  /* ── Summary ── */
+  .summary {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-top: 1.25rem;
+    display: none;
+  }
+  .summary.show { display: block; }
+  .summary h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+  .final-score { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+
+  /* ── Mobile ── */
+  @media (max-width: 480px) {
+    body { padding: 0.5rem; }
+    .card { padding: 1rem; }
+    .header { padding: 1rem; }
+    .opt-btn { font-size: 0.85rem; padding: 9px 10px; }
+    .detail-btns { flex-direction: column; }
+    .detail-btn { text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:0.9rem 1.25rem;margin-bottom:1.25rem;font-size:0.85rem;color:#1e3a8a;line-height:1.6;">
+    <strong>How to use:</strong>
+    Click an answer to see the explanation.
+    Use the <strong>Architect</strong> and <strong>Beginner</strong> buttons for deeper explanations.
+    Your progress is saved automatically in this browser.
+    &nbsp;&nbsp;
+    <a href="https://fbstack.github.io/cca-exam-prep/" style="color:#1e40af;" target="_blank">
+      &#8592; All quizzes
+    </a>
+  </div>
+
+  <div class="header">
+    <h1>CCA Practice Questions</h1>
+    <p>Getting an API Key &mdash; 2 questions &mdash; scenario-based, architect level</p>
+  </div>
+
+  <div class="progress-wrap">
+    <span class="progress-label">Progress</span>
+    <div class="bar-track"><div class="bar-fill" id="bar" style="width:0%"></div></div>
+    <span class="score-text" id="score-display">0 / 2</span>
+  </div>
+
+  <div id="quiz-area"></div>
+
+  <div class="nav-row">
+    <button class="nav-btn" id="prev-btn" onclick="navigate(-1)" disabled>&larr; Previous</button>
+    <span class="q-counter" id="q-counter">Question 1 of 2</span>
+    <button class="nav-btn" id="next-btn" onclick="navigate(1)" >Next &rarr;</button>
+  </div>
+
+  <div class="summary" id="summary">
+    <h2>Session complete</h2>
+    <div class="final-score" id="final-score"></div>
+    <p style="font-size:0.85rem;color:#6b7280;">
+      Your progress is saved in this browser. Return any time to continue.
+    </p>
+  </div>
+
+</div>
+
+<script>
+// ── Embedded data ───────────────────────────────────────────────────────────
+const QUESTIONS = [{"id": "getting_an_api_key_q003", "domain": "Production Architecture & Reliability", "difficulty": "intermediate", "type": "theory", "decision_source": "When should you instantiate a single shared Anthropic client versus creating a new client per request in a multi-user service?", "stem": "A FastAPI service handling 400 concurrent users begins throwing intermittent connection errors under peak load. A code review reveals that each request handler calls `Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))` at the top of its function body before making any API call. The infrastructure team has ruled out network and Anthropic-side rate limiting as causes. What is the most likely root cause, and what is the correct fix?", "options": {"A": "The API key is being read from the environment on every request, introducing race conditions in os.environ; fix by caching the key in a module-level variable and passing it explicitly.", "B": "Each request instantiates a new HTTP session and connection pool, exhausting OS file descriptors faster than they can be reclaimed; fix by instantiating a single Anthropic client at application startup and sharing it across all handlers.", "C": "The Anthropic client is not thread-safe when shared across concurrent requests; each handler must create its own isolated client instance to prevent state corruption.", "D": "FastAPI's async event loop conflicts with the synchronous Anthropic client constructor; fix by wrapping each instantiation in `asyncio.to_thread()` to avoid blocking."}, "correct": "B", "distractor_types": {"A": "near-miss", "B": "correct", "C": "plausible misconception", "D": "clearly wrong"}}, {"id": "getting_an_api_key_q005", "domain": "Production Architecture & Reliability", "difficulty": "architect", "type": "theory", "decision_source": "How should API key availability be validated at service startup versus at request time in a production deployment?", "stem": "A containerized microservice wrapping the Anthropic API is deployed to a Kubernetes cluster with readiness and liveness probes configured. The team ships a new release and discovers the ANTHROPIC_API_KEY secret was not mounted into the new pod — the environment variable is absent entirely. The service starts successfully, passes its readiness probe, and begins receiving production traffic. Every inbound request fails with an SDK AuthenticationError within 200ms. What is the primary architectural failure that allowed this outcome?", "options": {"A": "The SDK's AuthenticationError was not caught and re-raised as an HTTP 503, so the orchestrator's liveness probe never detected the degraded state and removed the pod from rotation.", "B": "The service performed no explicit None-check on the API key at startup, so it reported healthy to the orchestrator despite being permanently unable to authenticate, turning a deployment misconfiguration into a runtime failure affecting every user request.", "C": "The readiness probe interval was too long, allowing a window where the unready pod accepted traffic before the probe could detect the authentication failures and mark the pod unready.", "D": "The Kubernetes secret was not Base64-encoded correctly, which caused the environment variable to be injected as an empty string rather than None, bypassing the SDK's own startup validation."}, "correct": "B", "distractor_types": {"A": "near-miss", "B": "correct", "C": "plausible misconception", "D": "clearly wrong"}}];
+const BRIEF     = {"getting_an_api_key_q003": {"question_id": "getting_an_api_key_q003", "correct_letter": "B", "correct_explanation": "Each `Anthropic()` instantiation creates a new underlying HTTP client with its own connection pool, consuming OS file descriptors. At 400 concurrent requests, descriptor exhaustion occurs faster than the OS reclaims closed connections, producing intermittent errors. A single module-level client reuses a shared connection pool, eliminating this resource leak.", "distractor_explanations": {"A": "Reading from `os.environ` is a thread-safe dictionary lookup, not a source of race conditions. Caching the key changes nothing about connection pool creation, so descriptor exhaustion continues unchanged.", "C": "The Anthropic client is stateless with respect to individual requests—concurrent calls do not share mutable per-request state. This inverts the correct fix by prescribing per-request instantiation, which is precisely the pattern causing the exhaustion.", "D": "The `Anthropic()` constructor is a lightweight object initialization, not a blocking I/O operation that would stall the event loop. Wrapping it in `asyncio.to_thread()` adds overhead without addressing the connection pool proliferation."}}, "getting_an_api_key_q005": {"question_id": "getting_an_api_key_q005", "correct_letter": "B", "correct_explanation": "The fail-fast principle requires that a service validate all external dependencies—including credentials—before reporting itself healthy to the orchestrator. By skipping a startup None-check on the API key, the service passed its readiness probe and entered rotation in a permanently broken state, converting a deployment error into 100% request failure. The correct fix is to assert the key's presence at initialization and exit non-zero so Kubernetes never marks the pod ready.", "distractor_explanations": {"A": "This misidentifies the failure layer: the root problem is that the pod was admitted to traffic at all, not how it signaled degradation after the fact. Liveness probes restart crashed pods; they don't retroactively prevent a misconfigured pod from receiving its first requests.", "C": "The probe interval is irrelevant here because no probe was ever going to detect this failure—the readiness probe checked liveness, not credential validity. A shorter interval still probes the wrong thing and admits the broken pod.", "D": "The scenario explicitly states the environment variable is absent entirely, not empty. An absent variable yields None in Python, not an empty string, so this encoding explanation contradicts the given facts and invents a failure mode not present in the scenario."}}};
+const ARCHITECT = {"getting_an_api_key_q003": {"question_id": "getting_an_api_key_q003", "why_correct": "Every `Anthropic()` instantiation allocates a new `httpx.Client` (or `AsyncClient`) with its own connection pool — at 400 concurrent requests you're spawning hundreds of pools simultaneously, each holding open file descriptors until GC reclaims them. OS fd limits (typically 1024 default on Linux) get exhausted before the kernel can cycle connections through TIME_WAIT, producing exactly the intermittent connection errors described. The correct pattern is module-level or lifespan-scoped singleton instantiation: one client, one connection pool, shared across all handlers. This is standard resource pooling — the same reason you don't instantiate a new SQLAlchemy engine per request.", "distractors": {"A": "os.getenv() is a simple dict lookup on os.environ — no race condition, no meaningful overhead. Caching the key at module level is tidy hygiene but changes nothing about connection pool exhaustion. A would be directionally correct if the symptom were config inconsistency or secret rotation lag, not connection errors under concurrency.", "C": "This is the classic thread-safety misconception applied to HTTP clients. The Anthropic SDK's underlying httpx client is designed to be shared across threads and async tasks — that's the entire point of connection pooling. Creating a new client per request to avoid 'state corruption' is the anti-pattern that causes the actual failure here. In production, C doesn't fix anything; it makes the fd exhaustion worse by being the problem.", "D": "The Anthropic constructor itself is not meaningfully blocking — it's object initialization, not I/O. Wrapping it in asyncio.to_thread() adds thread pool overhead for a microsecond operation and still doesn't address pool exhaustion. This conflates 'synchronous' with 'blocking on I/O.'"}, "mental_model": "The CCA heuristic for HTTP client lifecycle is: anything that allocates a connection pool is a startup resource, not a request resource. If the object has a connection pool inside it, it belongs in application lifespan scope — FastAPI's `lifespan` context, a module-level singleton, or dependency injection with a cached instance. Per-request instantiation of pooled resources always fails at load.", "cross_domain_note": "This maps directly to the cost and latency domain: a shared client also enables prompt caching benefits via persistent connections, whereas per-request clients forfeit TLS session resumption and any connection keep-alive gains — compounding the reliability failure with unnecessary latency overhead."}, "getting_an_api_key_q005": {"question_id": "getting_an_api_key_q005", "why_correct": "The core failure is a missing fail-fast check at initialization — the service never asserted that its required credentials existed before declaring itself ready. In Kubernetes, the readiness probe is only as smart as what you expose to it; if the service reports healthy without validating its own dependencies, the orchestrator has no signal to withhold traffic. A None-check (or empty-string check) on the API key at startup should either block the process from starting or explicitly fail the readiness probe, converting a deployment misconfiguration into a failed rollout rather than a live incident. This is the classic 'misconfiguration masquerading as runtime failure' pattern — detectable at deploy time, instead paid for on every user request.", "distractors": {"A": "Catching AuthenticationError and mapping it to HTTP 503 is good error-handling hygiene, but it's a mitigation, not a fix — and it addresses liveness, not readiness. The real issue is the pod should never have entered the ready state in the first place. A corrects a symptom propagation problem; it does nothing to prevent the bad pod from receiving traffic initially.", "C": "Probe interval tuning is a real production concern for transient startup delays, but this scenario has no transient state — the key is permanently absent. No probe interval, however short, would catch a missing secret through health-check polling alone unless the service actively checks the credential and surfaces that as an unhealthy signal. The failure mode here isn't timing; it's the absence of any credential validation signal.", "D": "Base64 encoding is handled transparently by the Kubernetes secret injection mechanism — this is not a realistic failure vector, and the stem explicitly states the variable is absent, not malformed."}, "mental_model": "Any external dependency required for 100% of requests — credentials, connection strings, required config — must be validated at startup and wired into readiness signaling. If the service can't function without it, the orchestrator must know before routing traffic, not after. The rule: misconfiguration should fail deployments, never user requests.", "cross_domain_note": "This maps directly to the trust boundary domain — secrets absent from the environment are often a CI/CD pipeline or secret-manager integration gap, not a Kubernetes config gap. Validating secret presence at startup also reduces the jailbreak surface by ensuring the service never attempts unauthenticated calls that could surface ambiguous error states to callers."}};
+const NOVICE    = {"getting_an_api_key_q003": {"question_id": "getting_an_api_key_q003", "foundation": "When your Python code makes an HTTP request to an external API, it doesn't open a raw socket for every call from scratch — instead, it uses an HTTP session that maintains a pool of reusable connections, called a connection pool, so that subsequent requests can reuse already-established TCP connections rather than paying the setup cost each time. Think of a connection pool like a fleet of taxi cabs parked outside a hotel: if you keep the fleet around, guests can grab a cab instantly; but if you dismiss the fleet after every single trip and summon brand-new cabs each time, you'll eventually exhaust the city's available cabs during a busy conference. The Anthropic Python client wraps exactly this kind of HTTP session internally — when you call `Anthropic()`, it allocates that session and its pool. Each open connection counts against your OS's file descriptor limit — a finite system resource (typically 1024–65536 per process) that tracks every open file, socket, and pipe. If you create a new client on every request and the old ones aren't garbage-collected fast enough, you can silently drain that limit and cause new connections to fail.", "why_correct": "Here's the chain of events: 400 concurrent requests each call `Anthropic(api_key=...)` inside the handler function, which means 400 new HTTP sessions — each holding one or more open sockets — are created nearly simultaneously. Each of those sessions occupies file descriptors on the OS. Python's garbage collector doesn't immediately reclaim objects the moment they go out of scope under load, so old sessions linger while new ones keep arriving. At peak load, the process hits its file descriptor ceiling, and the OS starts refusing new socket allocations — which surfaces as intermittent connection errors, exactly the symptom described. The correct fix is to instantiate a single `Anthropic` client once at module or application startup — outside any request handler — and share that one object across all requests. That single client maintains one connection pool that efficiently reuses connections, keeping the file descriptor count low and stable regardless of request volume. This pattern is standard for any HTTP client library in a server context: `requests.Session`, `httpx.Client`, `aiohttp.ClientSession` — all of them are designed to be created once and reused, not recreated per request.", "key_insight": "An HTTP client is a resource manager, not just a function call — create it once at startup and share it, the same way you'd create a database connection pool.", "distractors": {"A": {"explanation": "Option A focuses on `os.getenv()` and suggests that reading an environment variable on every request introduces a race condition. In reality, `os.environ` in Python is a thread-safe dictionary-like object, and reading from it concurrently is not a source of race conditions or connection errors. This option correctly identifies that reading the env var repeatedly is slightly wasteful, which is true but entirely inconsequential for performance — it's a nanosecond dictionary lookup. The real problem is what happens after the key is read: the client object is instantiated, which is the expensive and resource-leaking operation.", "tempting": "Caching environment variables sounds like a sensible micro-optimization, and 'race condition' is a scary-sounding concurrency term that feels relevant when you're debugging a concurrent service.", "fails": "os.environ reads are thread-safe and trivially fast; caching the key string doesn't prevent the client from being re-instantiated and re-leaking file descriptors on every request."}, "C": {"explanation": "Option C invokes the concept of thread-safety — the guarantee that an object can be accessed by multiple threads simultaneously without corrupting its internal state. This is a real concern for some objects (like a naive counter or a list being mutated), and it's reasonable to wonder whether a shared HTTP client could have this problem. However, the Anthropic Python client (built on `httpx`) is designed to be shared: its connection pool handles concurrent access safely. More importantly, the symptom here — connection errors under load — is a resource exhaustion pattern, not a data corruption pattern. If thread-safety were the issue, you'd see garbled responses or exceptions about shared state, not generic connection failures.", "tempting": "Thread-safety warnings are common advice for shared objects in concurrent systems, and creating one client per request feels 'safer' because each handler gets its own isolated state.", "fails": "The Anthropic client is safe to share across concurrent requests, and creating per-request instances is precisely what causes the resource exhaustion this question describes."}, "D": {"explanation": "Option D invokes a real but different concern: the Anthropic SDK does have both synchronous and async variants, and blocking synchronous calls inside an async event loop can cause performance problems. However, the constructor `Anthropic()` itself is not a blocking I/O call — it's pure Python object initialization that takes microseconds. Wrapping object construction in `asyncio.to_thread()` would add overhead and complexity without addressing the file descriptor leak. This option conflates two separate concerns (sync/async compatibility and resource pooling) in a way that doesn't map to the symptoms.", "tempting": "FastAPI is async-first, so any mention of 'blocking the event loop' sounds credible in that context.", "fails": "Object construction isn't blocking I/O, so `asyncio.to_thread()` here is irrelevant overhead — and it still wouldn't prevent a new client from being created on every request."}}, "memory_anchor": "Creating an HTTP client inside a request handler is like checking out a new library card every time you want to borrow a book — eventually the library runs out of cards, and everyone gets turned away at the door.", "self_check": ["If you moved the `Anthropic()` call to module level (outside all functions, at the top of the file), how many times would it execute during the lifetime of the application?", "What system resource specifically gets exhausted when you create too many unclosed HTTP sessions, and what kind of error does that typically produce?", "Can you name one other Python HTTP library where the same 'create once, reuse everywhere' rule applies, and what is the name of the object you would reuse?"]}, "getting_an_api_key_q005": {"question_id": "getting_an_api_key_q005", "foundation": "In production systems, a service should only report itself 'healthy' if it is actually capable of doing its job. Kubernetes uses two probes — readiness (is this pod ready to receive traffic?) and liveness (is this pod still alive and worth keeping?) — to decide which pods should serve users. The problem here is about 'fail-fast' design: a principle where a system detects and loudly announces fatal configuration problems as early as possible, ideally at startup, rather than discovering them on the first real user request. Think of it like a pilot doing a pre-flight checklist — you want to discover the fuel gauge is broken on the tarmac, not at 30,000 feet. When a service skips this startup validation, a misconfiguration that could be caught instantly during deployment instead becomes a live incident that fails every single user.", "why_correct": "The service's core job is to call the Anthropic API, and calling the Anthropic API requires an API key. At startup, the service had one opportunity to check whether that key existed — something as simple as `if not os.environ.get('ANTHROPIC_API_KEY'): raise RuntimeError('API key missing')` — and it skipped that check entirely. Because the startup check was absent, the service initialized without error, and Kubernetes, seeing a healthy-looking process, marked the pod 'ready' and routed live traffic to it. The readiness probe passed because the probe only tests what it's told to test — typically an HTTP health endpoint — and that endpoint returned 200 OK without ever verifying the API key. From Kubernetes's perspective, the pod looked perfect; from reality's perspective, it was broken before the first user even arrived. This transforms what should have been a deployment-time failure — caught before a single user is affected — into a runtime failure that hits 100% of users until someone notices and rolls back. The fix is structural: check for the presence of the API key at application startup and refuse to start (or refuse to report ready) if it is missing.", "key_insight": "A service that cannot do its job should refuse to start, not start successfully and fail every user who asks.", "distractors": {"A": {"explanation": "This option focuses on error handling at request time — specifically, that the SDK's AuthenticationError should have been caught and converted into an HTTP 503 ('Service Unavailable') response so that Kubernetes's liveness probe could detect the degraded state. While better error handling is a real best practice, it doesn't address the root cause. The liveness probe watches for crashes or hangs, not for application-level authentication errors. Even perfect error handling here would still mean every user request fails — it just fails more gracefully with a 503 instead of an unhandled exception.", "tempting": "It sounds like fixing the error response would make Kubernetes aware of the problem and fix the routing.", "fails": "The liveness probe wouldn't automatically remove the pod just because requests return 503 — it only triggers on crashes or custom probe endpoints, and even if it did, you'd still be failing user requests while waiting for detection. The real fix is prevention at startup, not better failure responses."}, "C": {"explanation": "This option suggests the probe interval was too long, implying that if the readiness probe ran faster, it would have caught the authentication failures and pulled the pod from rotation quickly. This sounds plausible because readiness probes are indeed designed to remove broken pods from traffic. However, this misunderstands what the readiness probe is actually checking — it checks the health endpoint, not whether API authentication works. No matter how frequently the probe runs, it will keep returning healthy because the health endpoint itself never validates the API key.", "tempting": "Readiness probes are supposed to detect unhealthy pods and remove them, so a faster probe should catch the problem sooner.", "fails": "The probe never would have detected the problem regardless of interval, because the health endpoint was returning 200 OK — it had no logic to verify API key presence. Probe frequency is irrelevant when the probe itself is checking the wrong thing."}, "D": {"explanation": "This option introduces a specific Kubernetes secret encoding issue — suggesting the Base64 encoding was wrong, causing an empty string instead of None. Kubernetes secrets are stored Base64-encoded and decoded when injected into pods, so malformed encoding is theoretically a concern. However, this is a red herring: the scenario states the environment variable is 'absent entirely,' not present but empty. The Anthropic SDK does have its own validation, but that validation only runs when the SDK client is initialized with an empty or missing key — and even so, the core failure here is architectural, not an SDK encoding bug.", "tempting": "Kubernetes secret encoding is a real operational concern, and an empty string vs. None is the kind of subtle bug that causes hard-to-debug failures.", "fails": "The scenario explicitly tells us the variable is absent, not empty — and even if it were empty, the architectural failure (no startup validation) is the same root cause."}}, "memory_anchor": "A service missing its API key is like a car with no engine — it can still roll out of the garage and look fine sitting in the driveway, but it should honk loudly and refuse to move, not wait until someone tries to merge onto the highway.", "self_check": ["If you added `if not os.environ.get('ANTHROPIC_API_KEY'): sys.exit(1)` to the service's startup code, how would Kubernetes behave differently during the failed deployment?", "Why would a readiness probe that checks `/health` return 200 OK even when the API key is missing — what would need to change in the health endpoint to make it catch this problem?", "What is the difference between a 'deployment-time failure' and a 'runtime failure,' and why does catching problems earlier in that sequence matter for production reliability?"]}};
+const LESSON    = "getting_an_api_key";
+const N         = 2;
+
+// ── State ───────────────────────────────────────────────────────────────────
+let current  = 0;
+let answered = new Array(N).fill(null);   // null = unanswered, letter = chosen
+let correct  = 0;
+
+// ── localStorage performance tracking ───────────────────────────────────────
+const STORAGE_KEY = "cca_perf_" + LESSON;
+
+function loadPerf() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function savePerf(perf) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(perf)); }
+  catch(e) {}
+}
+
+function recordAnswer(qid, chosen, isCorrect) {
+  const perf = loadPerf();
+  if (!perf[qid]) perf[qid] = { attempts: 0, correct: 0, last: null };
+  perf[qid].attempts += 1;
+  if (isCorrect) perf[qid].correct += 1;
+  perf[qid].last = chosen;
+  savePerf(perf);
+}
+
+// ── Difficulty badge helper ──────────────────────────────────────────────────
+function diffBadge(d) {
+  if (!d) return "";
+  const cls = d === "foundational" ? "badge-found"
+            : d === "intermediate" ? "badge-inter"
+            : "badge-arch";
+  return `<span class="badge ${cls}">${d}</span>`;
+}
+
+// ── Render current question ──────────────────────────────────────────────────
+function render() {
+  const q   = QUESTIONS[current];
+  const ans = answered[current];
+  const brief_data = BRIEF[q.id] || {};
+  const arch_data  = ARCHITECT[q.id] || {};
+  const novice_data = NOVICE[q.id] || {};
+
+  const letters = ["A","B","C","D"];
+
+  let opts_html = "";
+  letters.forEach(ltr => {
+    const txt = (q.options || {})[ltr] || "";
+    if (!txt) return;
+    let cls = "opt-btn";
+    let disabled = "";
+    if (ans !== null) {
+      disabled = "disabled";
+      if (ltr === q.correct) cls += " correct";
+      else if (ltr === ans && ans !== q.correct) cls += " wrong";
+    }
+    opts_html += `<button class="${cls}" ${disabled} onclick="choose('${ltr}')" aria-label="Option ${ltr}">
+      <span class="opt-letter">${ltr}.</span>
+      <span>${txt}</span>
+    </button>`;
+  });
+
+  // Brief explanation text
+  let brief_text = "";
+  if (ans !== null && brief_data.correct_explanation) {
+    const wrong_exp = (brief_data.distractor_explanations || {})[ans] || "";
+    if (ans === q.correct) {
+      brief_text = `<strong>&#10003; Correct.</strong> ${brief_data.correct_explanation}`;
+    } else {
+      brief_text = `<strong>&#10005; Incorrect.</strong> ${wrong_exp}<br><br>`
+                 + `<strong>Correct answer (${q.correct}):</strong> ${brief_data.correct_explanation}`;
+    }
+  }
+
+  // Architect text
+  let arch_text = "";
+  if (arch_data.why_correct) {
+    arch_text = `<strong>Why ${q.correct} is correct:</strong> ${arch_data.why_correct}<br><br>`;
+    if (arch_data.mental_model) {
+      arch_text += `<strong>Mental model:</strong> ${arch_data.mental_model}`;
+    }
+  } else {
+    arch_text = "Architect-level explanation not available.";
+  }
+
+  // Novice text
+  let novice_text = "";
+  if (novice_data.foundation) {
+    novice_text = `<strong>Foundation:</strong> ${novice_data.foundation}<br><br>`;
+    if (novice_data.key_insight) {
+      novice_text += `<strong>Key insight:</strong> ${novice_data.key_insight}<br><br>`;
+    }
+    if (novice_data.memory_anchor) {
+      novice_text += `<em>${novice_data.memory_anchor}</em>`;
+    }
+  } else {
+    novice_text = "Novice explanation not available.";
+  }
+
+  const exp_show = ans !== null ? "show" : "";
+
+  document.getElementById("quiz-area").innerHTML = `
+    <div class="card">
+      <div class="card-meta">
+        <span class="q-num">Q${current+1}</span>
+        <span class="badge badge-domain">${q.domain || ""}</span>
+        ${diffBadge(q.difficulty)}
+        <span class="badge badge-type">${q.type || ""}</span>
+      </div>
+      <div class="stem">${q.stem || ""}</div>
+      <div class="options">${opts_html}</div>
+      <div class="explanation ${exp_show}" id="exp-area">
+        <div class="brief-exp" id="brief-exp">${brief_text}</div>
+        <div class="detail-btns">
+          <button class="detail-btn" id="btn-arch" onclick="toggleDetail('arch')">
+            &#128736; Architect explanation
+          </button>
+          <button class="detail-btn" id="btn-nov" onclick="toggleDetail('nov')">
+            &#128218; Beginner explanation
+          </button>
+        </div>
+        <div class="detail-content architect-content" id="detail-arch">${arch_text}</div>
+        <div class="detail-content novice-content" id="detail-nov">${novice_text}</div>
+      </div>
+    </div>`;
+
+  // Navigation state
+  document.getElementById("q-counter").textContent =
+    `Question ${current+1} of ${N}`;
+  document.getElementById("prev-btn").disabled = current === 0;
+  document.getElementById("next-btn").disabled = current === N - 1;
+
+  updateProgress();
+}
+
+// ── Answer selection ─────────────────────────────────────────────────────────
+function choose(letter) {
+  if (answered[current] !== null) return;
+  answered[current] = letter;
+  const q = QUESTIONS[current];
+  const isCorrect = letter === q.correct;
+  if (isCorrect) correct++;
+  recordAnswer(q.id, letter, isCorrect);
+  render();
+
+  // Show summary if all answered
+  if (answered.every(a => a !== null)) showSummary();
+}
+
+// ── Detail toggle ────────────────────────────────────────────────────────────
+function toggleDetail(which) {
+  const arch = document.getElementById("detail-arch");
+  const nov  = document.getElementById("detail-nov");
+  const bA   = document.getElementById("btn-arch");
+  const bN   = document.getElementById("btn-nov");
+
+  if (which === "arch") {
+    const showing = arch.classList.contains("show");
+    arch.classList.toggle("show", !showing);
+    nov.classList.remove("show");
+    bA.classList.toggle("active", !showing);
+    bN.classList.remove("active");
+  } else {
+    const showing = nov.classList.contains("show");
+    nov.classList.toggle("show", !showing);
+    arch.classList.remove("show");
+    bN.classList.toggle("active", !showing);
+    bA.classList.remove("active");
+  }
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function navigate(dir) {
+  current = Math.max(0, Math.min(N - 1, current + dir));
+  render();
+}
+
+// ── Progress bar ─────────────────────────────────────────────────────────────
+function updateProgress() {
+  const done = answered.filter(a => a !== null).length;
+  const pct  = done / N * 100;
+  document.getElementById("bar").style.width = pct + "%";
+  document.getElementById("score-display").textContent =
+    correct + " / " + done + " correct";
+}
+
+// ── Summary ──────────────────────────────────────────────────────────────────
+function showSummary() {
+  const el  = document.getElementById("summary");
+  el.classList.add("show");
+  const pct = Math.round(correct / N * 100);
+  const icon = pct >= 80 ? "&#10003; " : pct >= 60 ? "~ " : "&#10005; ";
+  document.getElementById("final-score").innerHTML =
+    icon + correct + "/" + N + " (" + pct + "%)";
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
