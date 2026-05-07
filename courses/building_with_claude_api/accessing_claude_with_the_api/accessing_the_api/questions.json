@@ -1,16 +1,16 @@
 [
   {
-    "id": "accessing_the_api_q005",
-    "domain": "Prompt Engineering",
-    "difficulty": "architect",
+    "id": "accessing_the_api_q001",
+    "domain": "Claude Code Configuration",
+    "difficulty": "foundational",
     "type": "theory",
-    "decision_source": "How to structure system prompts and user messages ",
-    "stem": "A content moderation team is building a Claude-powered review assistant. The system prompt establishes the assistant's role, tone, and a detailed rubric of 14 moderation categories with examples. During testing, the team notices that when users submit long, multi-part submissions with embedded requests to 'be more lenient,' Claude occasionally softens its rubric application in later paragraphs of its response \u2014 as if the user's framing has partially overridden the established evaluation criteria. The team needs to fix this without rewriting the entire system prompt. What is the most architecturally sound prompt engineering approach?",
+    "decision_source": "Whether to expose your Anthropic API key directly in client-side code or route all API calls through a server-side proxy",
+    "stem": "A startup is launching a customer-facing web chat application powered by Claude. To ship quickly, the frontend engineer proposes embedding the Anthropic API key directly in the JavaScript bundle so the browser can call the Anthropic API without a backend. The security lead pushes back and insists all API calls must be routed through a server-side proxy instead. What is the primary reason the server-side proxy approach is required for production deployments?",
     "options": {
-      "A": "Rewrite the system prompt using XML tags to separate each rubric category into its own labeled block, so Claude's structured-input parsing applies categories independently and resists cross-contamination from user framing.",
-      "B": "Anchor the system prompt with an explicit instruction that user messages cannot modify evaluation criteria, restate the non-negotiable constraints as a closing line in the system prompt, and add a human-turn prefix on each submission that reminds Claude to apply the rubric strictly before reading the user content.",
-      "C": "Lower the temperature setting so Claude produces more deterministic outputs, reducing the likelihood that user framing influences rubric application across long responses.",
-      "D": "Move the rubric definitions from the system prompt into the first human-turn message so they appear later in the context window and remain closer to the content being evaluated."
+      "A": "A server-side proxy allows the team to rotate the API key without redeploying the frontend, which is the main operational advantage over client-side storage.",
+      "B": "Any user can inspect the JavaScript bundle or intercept network requests to extract the embedded key, allowing them to make API calls billed to the owner with no access controls.",
+      "C": "Environment variables injected at build time are compiled into the JavaScript bundle the same way a hardcoded string is, so neither approach exposes the key to end users.",
+      "D": "Routing requests through a proxy adds a network hop that increases latency, but it is required because the Anthropic API enforces same-origin restrictions that block direct browser requests."
     },
     "correct": "B",
     "distractor_types": {
@@ -21,22 +21,64 @@
     }
   },
   {
-    "id": "accessing_the_api_q007",
-    "domain": "Agentic Architecture",
+    "id": "accessing_the_api_q003",
+    "domain": "Prompt Engineering",
     "difficulty": "intermediate",
     "type": "theory",
-    "decision_source": "Whether to use a single monolithic API call for a complex multi-step task or decompose it into a chain of smaller, targeted calls",
-    "stem": "A fraud detection agent autonomously investigates flagged transactions by performing five sequential operations: retrieving account history, classifying transaction risk, extracting behavioral signals, generating an investigation summary, and deciding whether to escalate to a human analyst. The team initially implemented all five operations in a single prompt, returning one structured JSON object. After deployment, they observe that risk classification errors silently corrupt behavioral signal extraction downstream, escalation decisions are inconsistent because the model conflates summary generation with its own decision logic, and any tool failure forces the entire investigation to restart \u2014 causing 3x latency spikes during high-fraud periods. Which architectural change best addresses all three failure modes simultaneously?",
+    "decision_source": "Whether to specify explicit format, length, and audience constraints in a system prompt or rely on Claude to infer appropriate defaults from a brief task description",
+    "stem": "A SaaS company deploys Claude as a customer support assistant with the system prompt: 'You are a helpful customer support agent.' Within two weeks, the support team reports that responses range from a single sentence to six-paragraph essays depending on query complexity, breaking the UI card layout and generating customer complaints about verbosity. The engineering lead proposes adding a retry loop that detects responses exceeding 150 words and re-prompts Claude to shorten them. What is the most architecturally sound response to this problem?",
     "options": {
-      "A": "Restructure the single prompt to require chain-of-thought reasoning, forcing the agent to explicitly output intermediate results before producing the final JSON, so each step's logic is visible and errors are easier to diagnose without adding API call overhead.",
-      "B": "Decompose the agent into five sequential API calls, each with a focused prompt and a defined input/output contract, so errors are caught and retried at the step level, each operation can be independently evaluated, and the escalation decision operates on a completed summary as an isolated input rather than as part of its own generation.",
-      "C": "Split the pipeline into two calls \u2014 one combining account retrieval and risk classification, one combining signal extraction and summary generation \u2014 to reduce API overhead while still enabling partial retries and keeping the escalation decision inside the second call where summary context is available.",
-      "D": "Add a post-processing validation layer that re-runs the full monolithic prompt whenever the JSON output fails schema validation, using a lower temperature on the retry to reduce decision variance and improve escalation consistency."
+      "A": "Prepend a formatting instruction to every user message at the application layer \u2014 for example, 'Reply in 2-3 sentences.' \u2014 so that length constraints are enforced per request without modifying the shared system prompt.",
+      "B": "Add explicit constraints to the system prompt specifying maximum response length, tone, reading level, and output structure so Claude has no ambiguity about expected format.",
+      "C": "Implement the retry loop as proposed \u2014 Claude will converge on the correct length after one reformatting pass without requiring prompt changes.",
+      "D": "Fine-tune a model on a curated set of approved support responses so that consistent length and tone become an inherent behavioral property rather than a runtime instruction."
     },
     "correct": "B",
     "distractor_types": {
       "A": "near-miss",
       "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "accessing_the_api_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to specify explicit format, length, and audience constraints in a system prompt or rely on Claude to infer appropriate defaults from a brief task description",
+    "stem": "In the lab, you initialized the Anthropic client and passed a system prompt to the `messages.create()` call. You are now testing a customer support assistant. When you pass `system='You are a helpful customer support agent.'` and send five different user queries ranging from simple to complex, you observe that the `content[0].text` responses vary significantly in length and occasionally include markdown formatting. Which change to your `messages.create()` call most directly resolves the inconsistency at the source?",
+    "options": {
+      "A": "Add `temperature=0` to the `messages.create()` call to make outputs deterministic and eliminate length variance.",
+      "B": "Update the `system` parameter to explicitly state the maximum number of sentences, prohibit markdown, specify plain prose, and define the target reading level for all responses.",
+      "C": "Wrap the `messages.create()` call in a loop that checks `len(content[0].text)` and retries with an appended instruction if the response exceeds a threshold.",
+      "D": "Set `max_tokens=150` to establish a consistent response ceiling across all query types."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "accessing_the_api_q009",
+    "domain": "Production Architecture & Reliability",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to design the five-step request lifecycle with synchronous blocking calls or implement streaming to progressively deliver Claude's response to end users",
+    "stem": "A consumer-facing writing assistant generates responses between 500 and 1500 tokens. During beta testing, the team observes that 34% of users close the tab before seeing any output, and session recordings confirm most abandonment occurs between the 8 and 12 second mark \u2014 before the full response has loaded. The product manager proposes adding a spinner animation and an optimistic placeholder ('Your content is being generated...') to signal progress. What is the most architecturally sound response to the abandonment problem?",
+    "options": {
+      "A": "Implement response streaming so the first tokens reach the client within one second, reducing perceived wait time regardless of total response length.",
+      "B": "Add the spinner and placeholder UI as proposed \u2014 users who see activity indicators are significantly less likely to abandon than users who see a blank screen.",
+      "C": "Reduce max_tokens to cap responses at 300 tokens, which brings synchronous delivery time under the 5-second threshold users tolerate.",
+      "D": "Establish a persistent WebSocket connection to the server but continue buffering the full response before forwarding it to the client, eliminating HTTP overhead without requiring streaming changes in the application layer."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
       "C": "plausible misconception",
       "D": "clearly wrong"
     }
