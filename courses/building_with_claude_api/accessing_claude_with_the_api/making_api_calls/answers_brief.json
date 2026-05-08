@@ -1,0 +1,62 @@
+[
+  {
+    "question_id": "making_api_calls_q002",
+    "correct_letter": "B",
+    "correct_explanation": "The `False` output means `os.getenv` returned `None` because no `.env` file exists for `load_dotenv()` to parse \u2014 the fix is to create that file, not to embed the key in source. Storing secrets in source code risks committing them to version control and exposing them in logs, diffs, or shared notebooks. The `.env` pattern keeps the secret out of tracked files while letting `load_dotenv()` inject it into the process environment where `os.getenv` can read it.",
+    "distractor_explanations": {
+      "A": "Local files are not safe by default \u2014 git tracks all files unless explicitly excluded via `.gitignore`, and a single accidental commit permanently embeds the key in repository history. The risk exists from the moment the file is staged.",
+      "C": "This is backwards: `python-dotenv`'s `load_dotenv()` exists precisely to parse `.env` files and inject their contents into the process environment so `os.getenv` can read them. Without calling `load_dotenv()` first, `os.getenv` has no knowledge of `.env` file contents.",
+      "D": "The `model` parameter in `client.messages.create()` specifies which Claude model to use, not authentication credentials. API keys are supplied at client initialization (`anthropic.Anthropic(api_key=...)`), not per-request, so this approach is architecturally incorrect."
+    }
+  },
+  {
+    "question_id": "making_api_calls_q003",
+    "correct_letter": "B",
+    "correct_explanation": "When max_tokens is set below the length required to complete a response, Claude stops generating mid-output \u2014 truncating the JSON object before closing braces or brackets are written. A 300-token ceiling on outputs that can reach 1,800 tokens guarantees truncation for longer documents, producing structurally invalid JSON that downstream parsers reject. The correct architecture sets max_tokens to cover the worst-case output size and uses actual usage data to tune cost controls separately.",
+    "distractor_explanations": {
+      "A": "Malformed JSON from insufficient formatting instructions would produce errors consistently across all documents, not selectively on longer ones. The length-correlated failure pattern points to truncation, not prompt-driven formatting errors.",
+      "C": "Rate limit errors produce HTTP 429 responses or retryable failures at the request level, not partial JSON objects. Downstream parse errors caused by truncated content indicate the response was received successfully but was structurally incomplete.",
+      "D": "Claude models generate valid structured output regardless of document complexity when given sufficient token budget. Switching models does not change the binding constraint, which is the max_tokens ceiling, not model capability."
+    }
+  },
+  {
+    "question_id": "making_api_calls_q005",
+    "correct_letter": "A",
+    "correct_explanation": "A liveness check only needs a valid API response, so model capability is irrelevant \u2014 this is a right-tool-for-the-job principle. Haiku costs a fraction of Sonnet per token, and setting max_tokens to 50 caps token spend per call. At 40\u201360 calls/day, both levers compound into significant savings without changing what the health check actually verifies.",
+    "distractor_explanations": {
+      "B": "Prompt caching reduces cost on repeated identical prompts, but health-check calls still incur at minimum cache-read token charges \u2014 it does not eliminate per-call billing. More critically, it leaves Sonnet's higher base token price in place, so the fundamental cost mismatch between model capability and task requirement remains.",
+      "C": "Temperature controls output randomness, not output length. Lowering temperature does not reduce token count or cost \u2014 max_tokens controls generation length, and the absence of a max_tokens limit is the direct cause of unconstrained token spend.",
+      "D": "Changing check frequency sacrifices deployment-level integration verification \u2014 the health check no longer confirms each deployment is live, which undermines its stated purpose. Reducing call frequency to cut costs with an oversized model is the wrong trade-off when a cheaper model eliminates the cost problem entirely."
+    }
+  },
+  {
+    "question_id": "making_api_calls_q008",
+    "correct_letter": "B",
+    "correct_explanation": "Compaction preserves semantic coherence while controlling token growth: older turns are distilled into a summary that retains relevant context, then new raw turns continue appending from that checkpoint. This directly addresses the finite context window constraint without blindly discarding information the model may still need. A fixed-length eviction scheme or growing history both eventually hit the context ceiling; compaction is the only strategy that scales indefinitely.",
+    "distractor_explanations": {
+      "A": "A fixed-length deque evicts oldest messages by count, not by token weight or semantic importance, so critical early context (e.g., the user's original problem statement) gets silently dropped. Token consumption is determined by content length, not message count, so a 60-message cap provides no reliable ceiling on context window usage.",
+      "C": "The Anthropic API is stateless by design \u2014 it has no server-side session store and no session ID mechanism. Passing a session ID is not a supported feature; the full messages array must be transmitted on every call regardless of where you persist it between requests.",
+      "D": "max_tokens controls the output budget for the response, not the input context window. Increasing it does nothing to accommodate a growing input history and will not prevent a context-length exceeded error when the cumulative messages array exceeds the model's context limit."
+    }
+  },
+  {
+    "question_id": "making_api_calls_q006",
+    "correct_letter": "B",
+    "correct_explanation": "A health-check is an infrastructure liveness signal \u2014 its job is to confirm the API connection is alive, not to validate application-layer model behavior. Coupling a liveness probe to a higher-cost model violates the model-tiering principle: at 5,000 daily calls, substituting Sonnet for Haiku introduces unnecessary cost with zero observability benefit. These are separate concerns that belong at separate layers.",
+    "distractor_explanations": {
+      "A": "This inverts the purpose of a health-check. Latency benchmarking is a performance-testing concern, not a liveness concern \u2014 a health-check that fails because the production model is slow is measuring the wrong thing entirely.",
+      "C": "The Anthropic SDK is model-agnostic at the client level; the model string is a request parameter, not a client-binding. Switching models does not require re-instantiation and causes no silent misrouting.",
+      "D": "This identifies a real architectural risk in some contexts, but it is not the primary violation here. The colleague's proposal fails first on the principle of separation of concerns and cost tiering, not on the specific failure mode of Sonnet degrading independently of Haiku."
+    }
+  },
+  {
+    "question_id": "making_api_calls_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Summarization compresses older context into dense, token-efficient representations while keeping recent raw turns intact, so the model retains semantic continuity without unbounded token growth. This pattern decouples session length from token cost\u2014older turns contribute a fixed summarized block rather than their full token weight. It directly resolves both the linear cost escalation and context-window failures by bounding total input tokens regardless of session depth.",
+    "distractor_explanations": {
+      "A": "Hard truncation to the last 10 turns discards older context permanently, breaking coherence for support issues that reference earlier details\u2014a customer's account number or complaint stated in turn 3 vanishes from the model's view by turn 14.",
+      "C": "Shrinking max_tokens reduces the model's output budget, not its input capacity; the full unbounded history still consumes input tokens, so context-window errors persist and response quality degrades as generation space collapses.",
+      "D": "Reconstructing the complete messages array from a database on every call still sends the full untruncated history to the API, so token count grows unboundedly\u2014the storage layer solves persistence, not context-window or cost problems."
+    }
+  }
+]
