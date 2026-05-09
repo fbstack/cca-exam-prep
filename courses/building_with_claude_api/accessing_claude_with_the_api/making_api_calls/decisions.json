@@ -1,0 +1,58 @@
+[
+  {
+    "decision": "Whether to hardcode the API key directly in source code or load it from an environment variable via a .env file",
+    "context": "A developer is building a Python application that calls the Anthropic API and needs to authenticate requests. The codebase will be pushed to a shared GitHub repository used by a team of five engineers.",
+    "options": [
+      "Hardcode the API key as a string literal in the Python file for simplicity",
+      "Store the key in a .env file, load it with python-dotenv, and add .env to .gitignore",
+      "Pass the API key as a command-line argument at runtime"
+    ],
+    "correct": "Option B: storing the key in .env and excluding it from version control. This prevents the secret from being committed and exposed in repository history, which is irreversible even after deletion.",
+    "constraint": "Any code that will be committed to version control or shared across developers must never contain plaintext secrets in source files.",
+    "failure_mode": "If the API key is hardcoded and committed, it appears in git history permanently. Automated scanners or malicious actors can extract it, leading to unauthorized API usage, unexpected billing charges, and a required key rotation that breaks all dependent services until updated.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "How to set the max_tokens parameter when making a Claude API request for use cases with variable-length responses",
+    "context": "A production summarization service uses Claude to condense support tickets into one-sentence summaries. The team is also building a separate code-generation endpoint that may produce hundreds of lines. Both services share the same API wrapper and the team wants to pick a single max_tokens value to simplify configuration.",
+    "options": [
+      "Set max_tokens to 4096 for all endpoints so responses are never truncated",
+      "Set max_tokens to 100 for all endpoints to control costs",
+      "Set max_tokens per endpoint based on the expected maximum output length for that specific use case"
+    ],
+    "correct": "Option C: configuring max_tokens per endpoint. max_tokens is a hard cutoff, not a target \u2014 Claude stops mid-response if the limit is reached, so the ceiling must be high enough for the longest legitimate output of each specific task.",
+    "constraint": "max_tokens must be calibrated to the upper bound of valid output for each distinct task; a single global value will either truncate long outputs or provide no useful cost guard on short ones.",
+    "failure_mode": "Setting max_tokens too low on a code-generation endpoint causes Claude to return syntactically incomplete code, which fails at parse or compile time and surfaces as silent corruption rather than an obvious API error. Setting it uniformly high on a summarization endpoint removes the cost-control guard, allowing runaway token spend if a prompt causes unexpectedly verbose output.",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to pass the API key explicitly to the Anthropic client constructor or rely on the SDK's automatic environment variable detection",
+    "context": "A team is deploying a Claude-powered microservice in two environments: a local development environment where engineers use personal .env files, and a Kubernetes production cluster where secrets are injected as environment variables by the secret manager. The service code must work in both contexts without modification.",
+    "options": [
+      "Always pass api_key=os.getenv('ANTHROPIC_API_KEY') explicitly to the Anthropic() constructor in application code",
+      "Instantiate Anthropic() with no api_key argument and let the SDK automatically read ANTHROPIC_API_KEY from the environment",
+      "Use a configuration class that switches between explicit and implicit key loading based on a separate ENV_MODE flag"
+    ],
+    "correct": "Option B: using Anthropic() with no explicit api_key argument. The SDK automatically reads ANTHROPIC_API_KEY from the environment in both local (.env loaded by dotenv) and production (injected by secret manager) contexts, keeping the application code environment-agnostic.",
+    "constraint": "When the deployment target injects secrets as environment variables and local development loads them via dotenv before the client is instantiated, implicit SDK detection provides zero-change portability across environments.",
+    "failure_mode": "Option A works but couples the application code to a specific retrieval pattern \u2014 if the secret manager changes the variable name or injection method, every instantiation site must be updated. Option C adds a configuration surface that can diverge between environments, causing authentication failures in production that do not reproduce locally, making them difficult to debug.",
+    "domain": "Claude Code Configuration",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "How to structure the messages array in a multi-step agentic workflow where Claude must reference earlier reasoning before acting",
+    "context": "An agentic pipeline asks Claude to first analyze a dataset, then decide which of three tools to invoke, then summarize the result. The orchestrator must pass prior outputs to subsequent Claude calls. The team is deciding whether to reconstruct messages from scratch each call or maintain and extend a running conversation history.",
+    "options": [
+      "On each step, send only the latest user instruction with no prior context, relying on a separate summary injected into the system prompt",
+      "Maintain the full messages array and append each assistant response and next user instruction before every subsequent API call",
+      "Discard conversation history after each step and re-extract only the structured output fields needed for the next prompt"
+    ],
+    "correct": "Option B for workflows where intermediate reasoning must be traceable and each step depends on Claude's prior stated logic. Appending the full history lets Claude reference its own earlier analysis without re-deriving it, preserving reasoning fidelity across steps.",
+    "constraint": "When subsequent agent steps require Claude to act consistently with decisions it made in earlier turns \u2014 not just on extracted structured data \u2014 the full message history must be maintained so the model has access to its own prior reasoning.",
+    "failure_mode": "Option A causes Claude to contradict earlier analysis because it cannot see what it previously concluded, producing inconsistent tool selections across runs on identical data. Option C loses intermediate reasoning steps, which means downstream steps may re-derive different conclusions from the same raw data, breaking determinism in the pipeline and making audit trails incomplete \u2014 a critical failure in regulated environments.",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect"
+  }
+]

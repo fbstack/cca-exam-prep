@@ -1,108 +1,17 @@
 [
   {
-    "id": "making_api_calls_q002",
-    "domain": "Production Architecture & Reliability",
-    "difficulty": "foundational",
-    "type": "lab",
-    "decision_source": "Whether to hardcode the API key directly in source code or load it from an environment variable",
-    "stem": "In the lab notebook, the cell labeled `cell-dotenv` calls `load_dotenv()` and then reads the key with `os.getenv(\"ANTHROPIC_API_KEY\")`, storing the result in `api_key`. The final print statement outputs `API key loaded: False`. A teammate suggests fixing this by pasting the actual key string directly into the `api_key` variable assignment so the notebook runs without errors. What is the correct response to this suggestion?",
-    "options": {
-      "A": "Accept the suggestion only if the notebook will never be pushed to a remote repository, since local files are not exposed to git history.",
-      "B": "Reject the suggestion and instead create a `.env` file in the notebook's directory containing `ANTHROPIC_API_KEY=\"your-key-here\"`, then rerun the `load_dotenv()` cell so `os.getenv` returns the key without embedding it in source.",
-      "C": "Accept the suggestion because `os.getenv` only reads system-level environment variables, not `.env` files, so python-dotenv is unnecessary for local development.",
-      "D": "Reject the suggestion and instead pass the key as a `model` parameter inside `client.messages.create()` so it is scoped to individual API calls rather than the entire notebook.",
-      "distractor_types": "ignore this field \u2014 see below"
-    },
-    "correct": "B",
-    "distractor_types": {
-      "A": "near-miss",
-      "B": "correct",
-      "C": "misconception",
-      "D": "clearly wrong"
-    }
-  },
-  {
-    "id": "making_api_calls_q003",
-    "domain": "Production Architecture & Reliability",
-    "difficulty": "intermediate",
-    "type": "theory",
-    "decision_source": "How to set max_tokens when building a production endpoint that must return complete, well-formed responses",
-    "stem": "A team has deployed a Claude-backed API that generates structured JSON summaries for legal documents. Documents vary significantly in length \u2014 some produce 200-token summaries, others require 1,800 tokens. The team sets max_tokens to 300 to keep costs predictable. Two days after launch, the on-call engineer is paged because downstream services are throwing JSON parse errors. What is the most likely root cause and the correct fix?",
-    "options": {
-      "A": "Claude is generating malformed JSON for complex documents; the fix is to add explicit JSON formatting instructions to the system prompt.",
-      "B": "The max_tokens limit is truncating responses mid-object for longer documents; the fix is to set max_tokens high enough to accommodate the largest expected output and monitor actual usage to calibrate costs.",
-      "C": "The API is hitting rate limits under load, causing partial responses; the fix is to implement exponential backoff and retry logic.",
-      "D": "The model selected is not suited for structured output; the fix is to switch to a larger Claude model with higher default output capacity."
-    },
-    "correct": "B",
-    "distractor_types": {
-      "A": "near-miss",
-      "B": "correct",
-      "C": "plausible misconception",
-      "D": "clearly wrong"
-    }
-  },
-  {
-    "id": "making_api_calls_q005",
-    "domain": "Production Architecture & Reliability",
-    "difficulty": "intermediate",
-    "type": "theory",
-    "decision_source": "Which Claude model to use for a high-volume smoke-test or health-check call that runs on every deployment",
-    "stem": "A platform team runs a CI/CD pipeline that calls the Claude API after every deployment to confirm the integration is live. The check runs 40\u201360 times per day and only needs to verify that the API path returns a valid response. The pipeline is currently configured with `model='claude-sonnet-4-0'` and no `max_tokens` limit. The team notices API costs are unusually high. What is the most architecturally sound change to reduce cost without sacrificing the integrity of the health check?",
-    "options": {
-      "A": "Replace claude-sonnet with claude-haiku and set max_tokens to a small value such as 50, since liveness verification requires no model capability and cost compounds at high call frequency.",
-      "B": "Keep claude-sonnet but add prompt caching so the same response is served from cache on repeated calls, eliminating per-call token charges after the first request.",
-      "C": "Lower the temperature setting to reduce token generation variance, which will make responses shorter and reduce the cost of each health-check call.",
-      "D": "Reduce the frequency of health checks from every deployment to once per hour, so the existing sonnet configuration remains valid while cutting overall API spend."
-    },
-    "correct": "A",
-    "distractor_types": {
-      "A": "correct",
-      "B": "near-miss",
-      "C": "plausible misconception",
-      "D": "clearly wrong"
-    }
-  },
-  {
-    "id": "making_api_calls_q006",
+    "id": "making_api_calls_q004",
     "domain": "Production Architecture & Reliability",
     "difficulty": "intermediate",
     "type": "lab",
-    "decision_source": "Which Claude model to use for a high-volume smoke-test or health-check call that runs on every deployment",
-    "stem": "In the lab notebook, the smoke-test cell uses `model='claude-haiku-4-5'` with `max_tokens=50` and sends a minimal prompt to verify the API client is live. Your platform team wants to adopt this pattern as a shared health-check endpoint called by 47 microservices on every deployment. A colleague proposes changing the model line to `model='claude-sonnet-4-0'` so the health-check 'better reflects the model used in production.' The system deploys approximately 5,000 times per day across all services. Which option best describes the primary architectural principle this colleague's proposal violates?",
+    "decision_source": "How to set the max_tokens parameter when making a Claude API request for use cases with variable-length responses",
+    "stem": "In the lab notebook, you configured client.messages.create() with a max_tokens parameter for a single endpoint. Your team now wants to extend the same wrapper to serve both the one-sentence ticket summarizer and a new code-generation route. When you run the code-generation route with the same max_tokens value you used for summarization, Claude's response is cut off mid-function with no API error raised. What does this behavior indicate, and what is the correct fix?",
     "options": {
-      "A": "The health-check should use the production model so that latency measurements reflect real inference time; using a cheaper model causes the health-check to pass latency thresholds that the production model would actually fail.",
-      "B": "A health-check exists to verify API reachability and client initialization, not to validate production model behavior. Binding a liveness signal to a higher-cost model couples infrastructure observability to application-layer concerns, and at 5,000 daily calls the cost differential becomes architecturally significant \u2014 this is the canonical argument for model tiering in pipeline design.",
-      "C": "The Anthropic SDK client object initialized in the lab notebook targets a specific model endpoint; switching the model string without re-instantiating the client will cause silent request misrouting at runtime.",
-      "D": "Using a smaller model for health-checks introduces a false-negative risk: if Sonnet's endpoint degrades but Haiku's remains healthy, the health-check will report the system as up when the production path is actually impaired.",
-      "correct": "B",
-      "distractor_types": {
-        "A": "near-miss",
-        "B": "correct",
-        "C": "plausible misconception",
-        "D": "near-miss"
-      }
-    },
-    "correct": "B",
-    "distractor_types": {
-      "A": "near-miss",
-      "B": "correct",
-      "C": "plausible misconception",
-      "D": "near-miss"
-    }
-  },
-  {
-    "id": "making_api_calls_q007",
-    "domain": "Context Management",
-    "difficulty": "architect",
-    "type": "theory",
-    "decision_source": "How to structure the messages array when building a multi-turn production application that must maintain conversation coherence over many exchanges",
-    "stem": "A customer support platform handles sessions that average 40 back-and-forth turns before resolution. Engineers initially append every prior user and assistant message to the messages array on each call. After three weeks in production, they observe per-session API costs climbing linearly with session length, and a growing number of requests failing with context-window errors on long sessions. The team debates how to restructure history management without breaking conversation coherence. What is the most architecturally sound approach?",
-    "options": {
-      "A": "Truncate the messages array to the most recent 10 turns on every call, discarding older exchanges to enforce a hard token ceiling.",
-      "B": "Summarize older turns into a condensed context block prepended to the messages array, while preserving the most recent raw turns verbatim.",
-      "C": "Reduce max_tokens on each call proportionally as the session grows, freeing input-token budget to accommodate the full unbounded history.",
-      "D": "Persist the full conversation history in a database and reconstruct the complete messages array from storage on each API call, offloading memory management to the application layer."
+      "A": "The cutoff indicates Claude encountered a context window overflow; the fix is to shorten the system prompt to free up output capacity.",
+      "B": "The cutoff indicates max_tokens was reached \u2014 a hard stop that Claude does not report as an error; the fix is to set a higher max_tokens value calibrated to the maximum expected output length of the code-generation endpoint specifically.",
+      "C": "The cutoff indicates a transient network timeout during streaming; the fix is to add a retry loop around client.messages.create() so incomplete responses are automatically re-requested.",
+      "D": "The cutoff indicates the model selected is too small for code generation; the fix is to switch to a larger Claude model, which has a higher default output limit.",
+      "E": ""
     },
     "correct": "B",
     "distractor_types": {
@@ -114,21 +23,21 @@
   },
   {
     "id": "making_api_calls_q008",
-    "domain": "Context Management",
+    "domain": "Production Architecture & Reliability",
     "difficulty": "architect",
     "type": "lab",
-    "decision_source": "How to structure the messages array when building a multi-turn production application that must maintain conversation coherence over many exchanges",
-    "stem": "In the lab, you built a multi-turn loop that appends each new user message and assistant response to a conversation_history list, then passes the entire list as the messages argument to client.messages.create() on every call. After testing with short sessions the loop works correctly, but your team now needs to deploy this pattern to a production support bot where sessions can exceed 60 turns. Given the stateless nature of the API and the finite context window, which change to the conversation_history management logic is most critical before production deployment?",
+    "decision_source": "How to structure the messages array in a multi-step agentic workflow where Claude must reference earlier reasoning before acting",
+    "stem": "In the lab, you built multi-turn conversations by appending each assistant response to the messages list before constructing the next API call with client.messages.create(). Your team is now extending this pattern into a three-step agentic pipeline for a financial audit tool: step one has Claude assess transaction anomalies, step two has it select an investigative action, and step three has it draft a compliance report. A colleague proposes that after step one, you extract only the anomaly score and category fields from Claude's response and pass those as a new user message \u2014 discarding the rest of the assistant turn \u2014 to keep the context lean. Under what condition does this approach introduce audit risk that the full-history pattern avoids?",
     "options": {
-      "A": "Replace the conversation_history list with a deque of fixed length so that once 60 messages are stored, the oldest are automatically evicted one-by-one, keeping raw turn count constant.",
-      "B": "Introduce a compaction step that periodically replaces older entries in conversation_history with a single summarized assistant message, then resumes appending raw turns from the current point forward.",
-      "C": "Store conversation_history server-side between sessions and pass only a session ID to the API, avoiding repeated transmission of the full history on each call.",
-      "D": "Increase the max_tokens parameter dynamically with each turn to ensure Claude always has enough output budget to account for the growing input history."
+      "A": "When the anomaly score and category fields are insufficient to reconstruct Claude's full reasoning, step three may produce a compliance report whose conclusions cannot be traced back to the logic Claude applied in step one, creating an incomplete audit trail.",
+      "B": "When the messages list grows beyond 10 turns, client.messages.create() will truncate earlier entries automatically, making the full-history pattern equally unreliable for long pipelines.",
+      "C": "When step two requires Claude to select an action, injecting only structured fields is equivalent to maintaining the full history because Claude re-derives the same reasoning from the same input data.",
+      "D": "When the model parameter is set to claude-sonnet-4-0, assistant messages are cached server-side, so discarding them locally has no effect on the reasoning available to subsequent calls."
     },
-    "correct": "B",
+    "correct": "A",
     "distractor_types": {
-      "A": "near-miss",
-      "B": "correct",
+      "A": "correct",
+      "B": "near-miss",
       "C": "plausible misconception",
       "D": "clearly wrong"
     }
