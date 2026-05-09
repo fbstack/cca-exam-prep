@@ -1,0 +1,57 @@
+[
+  {
+    "decision": "Whether to store and resend the full conversation history with each API request or rely on the API to maintain session state",
+    "context": "A customer support chatbot needs to reference earlier messages in the conversation to answer follow-up questions like 'Can you elaborate on that?' The developer is deciding how to implement the conversation backend.",
+    "options": [
+      "Rely on Claude's API to automatically remember previous messages within a session",
+      "Maintain a local messages list in application code and send the full history with every request"
+    ],
+    "correct": "Option B: Maintain a local messages list and send full history. The Anthropic API is stateless \u2014 every request is independent with no server-side memory of prior exchanges.",
+    "constraint": "The Anthropic API is completely stateless; there is no session or conversation ID that persists context between calls.",
+    "failure_mode": "Follow-up questions with pronouns or references like 'explain that further' or 'write another sentence' produce nonsensical or random responses because Claude has no context about what was previously discussed.",
+    "domain": "Context Management",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Whether to append Claude's assistant response to the messages list before sending the next user turn",
+    "context": "A developer builds a multi-step research assistant where each user question builds on Claude's prior answer. They add the user messages to the history but are unsure whether to also store Claude's responses.",
+    "options": [
+      "Store only user messages in the conversation history and omit assistant responses to save tokens",
+      "Store both user messages and assistant responses in the messages list, maintaining the full alternating turn structure",
+      "Store a summarized version of Claude's response instead of the full text"
+    ],
+    "correct": "Option B: Store both user and assistant messages in the correct alternating role order. Claude requires a valid alternating user/assistant message structure to maintain coherent context.",
+    "constraint": "The Anthropic messages API requires messages to alternate between 'user' and 'assistant' roles; omitting assistant turns breaks the expected turn structure and severs the conversational thread.",
+    "failure_mode": "If assistant messages are omitted, Claude cannot connect follow-up questions to its own prior answers, producing responses that ignore or contradict previous output. Additionally, the API may return a validation error for consecutive user-role messages.",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "How to manage unbounded conversation history growth in a long-running multi-turn application to control token costs and avoid context window limits",
+    "context": "A productivity assistant has been deployed for enterprise users who run sessions lasting dozens of turns over hours. Token costs are rising and occasionally requests fail when the accumulated history exceeds the model's context window.",
+    "options": [
+      "Send the full unbounded message history with every request, accepting the token cost and risk of hitting the context limit",
+      "Implement a sliding window that truncates the oldest messages once history exceeds a fixed token budget",
+      "Periodically summarize older portions of the conversation into a single compressed assistant or system message, prepending it to a shorter recent history window"
+    ],
+    "correct": "Option C: Periodic summarization (conversation compaction) is best for long-running sessions. It preserves semantic continuity of earlier context while keeping token counts manageable, unlike hard truncation which silently loses facts the user referenced earlier.",
+    "constraint": "Long-running assistants will eventually exceed the context window with raw history. Summarization compresses old turns into durable context rather than discarding them, maintaining coherence at scale.",
+    "failure_mode": "With Option A, requests eventually fail with context-length errors and costs scale linearly with session length. With Option B (hard truncation), the assistant silently forgets early facts (e.g., user preferences, prior decisions) leading to contradictory or repetitive responses that erode user trust.",
+    "domain": "Context Management",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Whether to set max_tokens explicitly on every API call in a multi-turn conversation application",
+    "context": "A developer is wrapping the API in a reusable chat() helper function used across multiple product features with varying response length needs. They are deciding whether to hardcode max_tokens, omit it, or make it configurable.",
+    "options": [
+      "Omit max_tokens and rely on the API default to avoid over-constraining responses",
+      "Hardcode a single max_tokens value in the shared chat() helper",
+      "Set max_tokens explicitly on every call, making it a parameter with a sensible default in the helper function"
+    ],
+    "correct": "Option C: Always set max_tokens explicitly, parameterized with a context-appropriate default. This prevents runaway token consumption on unexpectedly verbose responses and makes cost behavior predictable.",
+    "constraint": "Without an explicit max_tokens, the API may generate very long responses on open-ended prompts, making cost and latency unpredictable across a shared helper used in diverse contexts.",
+    "failure_mode": "Omitting max_tokens causes some calls to generate thousands of tokens for prompts that only needed a short answer (e.g., 'write another sentence'), inflating per-request costs and increasing latency. In high-volume pipelines, this causes budget overruns.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  }
+]

@@ -1,0 +1,170 @@
+[
+  {
+    "id": "multi_turn_conversations_q001",
+    "domain": "Context Management",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Whether to store and resend the full conversation history with each API request or rely on the API to maintain session state",
+    "stem": "A customer support chatbot handles multi-turn conversations where users frequently ask follow-up questions like 'Can you clarify the second option you mentioned?' After deploying to production, the team notices these follow-up questions consistently return nonsensical responses that ignore all prior context. The backend sends a new API request for each user message. What is the most likely cause of this failure?",
+    "options": {
+      "A": "The system prompt is too short to instruct Claude to remember prior messages",
+      "B": "The API is stateless \u2014 each request is independent, and prior messages are not automatically retained between calls",
+      "C": "The session token is expiring between user messages, causing Claude to reset its conversational state",
+      "D": "Claude's context window is too small to hold more than one exchange at a time"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q002",
+    "domain": "Context Management",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to store and resend the full conversation history with each API request or rely on the API to maintain session state",
+    "stem": "A team is building a tutoring assistant using a message management pattern identical to the lab's add_user_message() and add_assistant_message() helper functions. The developer correctly appends each user message and assistant reply to the messages list after every turn. However, the chat() function is called with messages=[] hardcoded in the function body rather than accepting the accumulated list as a parameter. When a student asks 'Can you give me another example of that?', Claude responds with an unrelated example. What is the most likely architectural cause?",
+    "options": {
+      "A": "The assistant messages should not be stored \u2014 only user messages need to be retained because Claude infers its own prior responses from context",
+      "B": "The chat() function is sending an empty message list on every call, so Claude never receives the accumulated conversation history",
+      "C": "The add_assistant_message() function is appending to a local copy of the list rather than the shared reference, so history is silently discarded",
+      "D": "The Anthropic API requires a session_id parameter to associate sequential requests with the same conversation thread"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q003",
+    "domain": "Context Management",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to append Claude's assistant response to the messages list before sending the next user turn",
+    "stem": "A team has built a multi-step legal research assistant where attorneys ask follow-up questions that reference Claude's prior analysis. After several weeks in production, attorneys report that Claude frequently contradicts its own earlier conclusions and fails to build on prior reasoning. A code review reveals that the pipeline appends each user question to the messages list but discards Claude's responses after displaying them. What is the most direct architectural cause of this failure?",
+    "options": {
+      "A": "The messages list grows too large across a session, causing Claude to prioritize recent tokens and lose coherence with earlier context.",
+      "B": "Without assistant messages in the history, Claude receives consecutive user-role messages, severing the conversational thread and preventing Claude from grounding follow-up answers in its own prior output.",
+      "C": "Claude's responses should be summarized before storage to reduce token overhead and improve retrieval coherence across turns.",
+      "D": "The system prompt is not being re-sent with each request, so Claude loses the behavioral context that ties the conversation together."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q004",
+    "domain": "Context Management",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to append Claude's assistant response to the messages list before sending the next user turn",
+    "stem": "A customer support pipeline is built using helper functions modeled on the add_user_message() and add_assistant_message() pattern from the team's lab notebook. Code review reveals the following sequence executes after every API call: (1) add_user_message() appends the user's turn to the messages list, (2) chat() sends the list and returns Claude's response text, (3) add_user_message() is called again with the next user input \u2014 skipping add_assistant_message() entirely. During QA, the team observes that by the third turn Claude begins responding as if it has no knowledge of earlier exchanges, despite logging confirming the full messages list is being sent. What is the most likely cause of this behavior?",
+    "options": {
+      "A": "The messages list accumulates only user-role entries because add_assistant_message() is never called, producing a role sequence the API cannot interpret as a coherent conversation and causing Claude to treat each turn as contextually isolated.",
+      "B": "The chat() function does not pass a system parameter, so without a persistent behavioral anchor, Claude resets its conversational framing after two turns.",
+      "C": "Sending only user-role messages causes the API to silently drop messages beyond a role-uniformity threshold, truncating the list to a single entry before each request.",
+      "D": "The messages list object is being mutated in place across turns, so each new call to add_user_message() overwrites prior entries rather than appending to them."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q005",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "How to manage unbounded conversation history growth",
+    "stem": "An enterprise productivity assistant has been live for three months. Power users run sessions of 40\u201360 turns over several hours, regularly referencing decisions and preferences stated early in the conversation \u2014 things like budget constraints, stakeholder names, and agreed-upon project scope. The platform is seeing a 12% request failure rate due to context-window overflows, and token costs have tripled since launch. The engineering team proposes a hard sliding window that drops the oldest 20% of messages whenever the token count exceeds 80,000 tokens, arguing this will cut costs and eliminate overflows. A product manager pushes back, saying the assistant will start contradicting earlier decisions. The engineering lead counters that most early messages are just pleasantries and framing, and that users will re-state anything important. Given this specific usage pattern, what is the most significant architectural risk the engineering lead is underestimating?",
+    "options": {
+      "A": "Dropping the oldest 20% of messages on a per-overflow basis will cause bursty token reduction rather than smooth cost control, meaning costs will still spike during the high-turn sessions that generate the most value, while the truncation overhead adds latency that degrades user experience in exactly those sessions.",
+      "B": "Hard truncation silently removes the messages where users stated non-recoverable constraints \u2014 budget ceilings, scope boundaries, explicit decisions \u2014 which users stated once and will not repeat because they believe the assistant retains them, causing the assistant to propose actions that directly contradict committed project parameters without any visible error signal.",
+      "C": "Sliding-window truncation will cause the assistant to lose the structured outputs and tool-call results that were appended early in the session window, since those messages are oldest and will be dropped first, breaking any downstream logic that depends on retrieving those results later in the conversation.",
+      "D": "The 80,000-token threshold is too close to the model's context limit, meaning overflow failures will continue on sessions where a single turn contains a large document attachment, regardless of how aggressively older messages are pruned."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q006",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "How to manage unbounded conversation history growth",
+    "stem": "A team has built a long-running legal research assistant using the same append-only messages list pattern from their lab \u2014 each user turn and assistant reply is appended to a list and the full list is passed to client.messages.create() on every call. After four weeks in production, senior associates report that sessions longer than 90 minutes occasionally receive responses that contradict guidance the assistant gave earlier in the same session, and some requests are failing outright. A junior engineer suggests fixing the failures by increasing max_tokens on each request. What is the most architecturally sound diagnosis and remedy?",
+    "options": {
+      "A": "The contradictions are caused by non-determinism in the model; lowering temperature to 0.2 will stabilize responses across long sessions without requiring changes to the history management strategy.",
+      "B": "Increasing max_tokens addresses response length limits, not context-window input limits; the root cause is that unbounded history growth eventually exceeds the model's input context. The correct remedy is periodic summarization \u2014 compressing older turns into a durable summary message prepended to a shorter recent window \u2014 so semantic continuity is preserved without linear token growth.",
+      "C": "The failures indicate a rate-limit issue under high concurrency; implementing an exponential back-off retry loop around client.messages.create() will resolve both the failures and the coherence drift.",
+      "D": "The append-only pattern is fundamentally incompatible with sessions longer than 30 minutes; the assistant should be redesigned to start a new messages list every 30 minutes and instruct users to restate their requirements at each restart."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q007",
+    "domain": "Context Management",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to set max_tokens explicitly on every API call in a multi-turn conversation application",
+    "stem": "A product team has built a shared chat() helper used by five different features: a one-line status summarizer, a customer support bot, a code explainer, a weekly digest generator, and a brainstorming assistant. The helper omits max_tokens entirely, relying on the API default. After three weeks in production, the finance team flags that API costs are 4x the projected budget, and p95 latency has spiked on the status summarizer. What is the most architecturally sound change to the shared helper?",
+    "options": {
+      "A": "Switch all features to a streaming response pattern so the status summarizer can begin displaying tokens as they arrive, reducing perceived latency without changing the underlying generation budget",
+      "B": "Parameterize max_tokens in the helper with a conservative default, allowing each call site to override it based on the expected response length for that feature",
+      "C": "Set a single hardcoded max_tokens of 4096 in the helper to cap worst-case token usage across all features",
+      "D": "Lower the model temperature in the helper to reduce verbose outputs and bring token consumption within budget"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "clearly wrong",
+      "D": "plausible misconception"
+    }
+  },
+  {
+    "id": "multi_turn_conversations_q008",
+    "domain": "Context Management",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to set max_tokens explicitly on every API call in a multi-turn conversation application",
+    "stem": "A team inherits a production support bot built around a chat() helper structured identically to the one in your lab notebook \u2014 it wraps client.messages.create() with a hardcoded max_tokens=1000 and accepts a messages list. The bot serves three distinct workflows: a triage flow that needs single-sentence verdicts, a root-cause-analysis flow that may need several paragraphs, and a runbook-generation flow that can require thousands of tokens. As conversation history accumulates across turns, the team observes that the token budget available for Claude's actual response shrinks \u2014 and runbook outputs are being silently truncated mid-sentence. What is the most appropriate architectural change to manage the output token budget correctly across all three workflows?",
+    "options": {
+      "A": "Increase the hardcoded max_tokens value in the shared helper to 4096 so that runbook generation is never truncated, relying on Claude to self-limit shorter responses for triage",
+      "B": "Remove max_tokens from the helper entirely so the API's default governs each call, trusting that the API will allocate sufficient tokens based on conversation length",
+      "C": "Add a max_tokens parameter to the helper with a default of 1000, and update each call site to pass a value appropriate for the expected output size of its workflow",
+      "D": "Implement a post-processing step that detects truncated responses and automatically resubmits the conversation with the incomplete assistant turn appended as context"
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "plausible misconception",
+      "C": "correct",
+      "D": "clearly wrong"
+    }
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": "multi_turn_conversations_q001",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic API is stateless \u2014 each HTTP request is a completely isolated inference call with no memory of previous requests. The application is responsible for constructing and resending the full conversation history in the `messages` array with every new request. Without this, each follow-up question is processed as if it's the first message Claude has ever received.",
+    "distractor_explanations": {
+      "A": "System prompt length is irrelevant here \u2014 no instruction can make Claude recall messages from prior API requests that were never included in the current request payload.",
+      "C": "There is no session token mechanism in the Anthropic API that maintains conversational state; this misconception assumes server-side session management that doesn't exist in the API design.",
+      "D": "Claude's context window is large enough to hold many exchanges; the failure is that prior messages are never sent to the API at all, not that they exceed any size limit."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q006",
+    "correct_letter": "B",
+    "correct_explanation": "The append-only pattern causes linear token growth that eventually exhausts the model's input context window, producing both outright failures (request rejection) and coherence drift (older context gets truncated or deprioritized). Increasing max_tokens controls output length, not input capacity \u2014 it targets the wrong parameter entirely. Periodic summarization compresses older turns into a durable summary, preserving semantic continuity while keeping total input tokens bounded.",
+    "distractor_explanations": {
+      "A": "Temperature controls output randomness, not the model's ability to access earlier context. Contradictions across long sessions are a context-window truncation problem, not a non-determinism problem \u2014 lowering temperature leaves the root cause completely unaddressed.",
+      "C": "Rate-limit errors produce consistent, immediate failures with retryable status codes, not gradual coherence degradation after 90 minutes. Exponential back-off handles transient throttling, not token budget exhaustion caused by accumulated history.",
+      "D": "Discarding conversation history every 30 minutes destroys semantic continuity and shifts the burden of context reconstruction onto users. The append-only pattern is not inherently time-limited; its failure mode is unbounded token growth, which summarization solves without session resets."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q002",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic API is stateless \u2014 every request must include the full conversation history for Claude to have context. By hardcoding messages=[] in the chat() function body, the accumulated history is built correctly but never passed to the API, so each call starts a fresh, empty conversation. Claude sees only the latest user message with no prior turns, making referential follow-ups like 'another example of that' impossible to resolve.",
+    "distractor_explanations": {
+      "A": "The API has no inference mechanism for prior assistant responses \u2014 Claude only sees what is explicitly included in the messages list. Omitting assistant messages breaks the alternating user/assistant turn structure the API requires.",
+      "C": "The scenario specifies the developer correctly appends messages to the list, ruling out a reference vs. copy bug. The failure point is at the chat() call boundary, not inside the append functions.",
+      "D": "The Anthropic Messages API has no session_id parameter and maintains no server-side session state. Conversation continuity is the caller's responsibility via the messages array."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Claude has no persistent memory between API calls \u2014 the messages list is the entire conversational record. When assistant turns are discarded, Claude sees only a sequence of user messages with no record of what it previously concluded, so each response is generated without access to its own prior reasoning. This breaks referential continuity, causing Claude to contradict itself and ignore its earlier analysis.",
+    "distractor_explanations": {
+      "A": "Context length pressure degrades performance gradually and symmetrically, not through self-contradiction on follow-up questions \u2014 the failure mode here is missing assistant turns entirely, not an oversized history.",
+      "C": "Summarization is an optimization strategy for long contexts, not a fix for the root cause; the pipeline isn't storing assistant messages at all, so summarizing them is irrelevant.",
+      "D": "The system prompt governs behavioral instructions, not conversational continuity; re-sending it would not give Claude access to its own prior analytical conclusions."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q004",
+    "correct_letter": "A",
+    "correct_explanation": "The Messages API requires alternating user/assistant roles to represent a coherent conversation history. By skipping add_assistant_message(), the pipeline sends a list of only user-role entries, which breaks the conversational structure Claude relies on to track prior context \u2014 so each new turn appears to arrive without a grounded exchange preceding it.",
+    "distractor_explanations": {
+      "B": "The absence of a system prompt affects behavioral defaults, not conversational memory. Claude does not 'reset framing' after two turns due to a missing system parameter \u2014 context is maintained through the messages list, not the system field.",
+      "C": "The API has no role-uniformity threshold that silently truncates messages. Malformed role sequences produce errors or degraded coherence, not silent list truncation to a single entry.",
+      "D": "In-place mutation would cause appends to accumulate rather than overwrite, and the symptom described is context loss, not missing messages. The logs confirming a full list is sent rules out overwriting as the failure mode."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q005",
+    "correct_letter": "B",
+    "correct_explanation": "The critical failure mode here is silent loss of non-recoverable constraints. Power users state budget ceilings, scope boundaries, and stakeholder decisions once \u2014 as established ground truth \u2014 and never repeat them because they expect the assistant to retain them. When hard truncation silently removes these early messages, the assistant continues generating responses with no error signal, directly contradicting committed parameters the user believes are still in context.",
+    "distractor_explanations": {
+      "A": "This identifies a real cost-smoothing inefficiency, but it's a performance problem, not an architectural risk to output correctness. The engineering lead's core underestimation is about semantic integrity, not latency or cost spikes.",
+      "C": "This conflates tool-call result loss with the actual usage pattern described. The scenario specifies users referencing decisions and preferences stated in natural language, not structured outputs or tool results \u2014 making this a misconception about what content is actually at risk.",
+      "D": "This misidentifies the threshold as the primary problem and treats large attachments as the failure driver. The 12% overflow rate is already being addressed by the sliding window; the question is about what the window destroys in the process, not whether the threshold is optimally placed."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Parameterizing max_tokens with a per-call-site override applies the principle of context budget scoping: each feature has a known output size requirement, and the token limit should be set accordingly. Omitting max_tokens allows the model to generate up to its full context window by default, which explains both the cost overrun and the latency spike on the status summarizer. A conservative shared default prevents runaway generation while letting high-output features like the digest generator opt into larger budgets explicitly.",
+    "distractor_explanations": {
+      "A": "Streaming changes how tokens are delivered to the client, not how many tokens the model generates\u2014the generation budget and total cost remain identical. This addresses perceived latency on the status summarizer but leaves the cost overrun and actual generation waste completely unresolved.",
+      "C": "A hardcoded 4096-token ceiling imposes a one-size-fits-all cap that over-allocates for the one-line summarizer and potentially truncates legitimate output for the digest generator or brainstorming assistant. It eliminates per-feature flexibility, which is the root architectural problem.",
+      "D": "Temperature controls output randomness and creativity, not response length or token count. Lowering temperature does not reliably reduce verbosity and has no direct mechanism for bringing token consumption or cost within budget."
+    }
+  },
+  {
+    "question_id": "multi_turn_conversations_q008",
+    "correct_letter": "C",
+    "correct_explanation": "The correct principle is per-call-site token budget control: different workflows have fundamentally different output requirements, so max_tokens must be set at the call site, not globally in shared infrastructure. Making max_tokens a parameter with a sensible default preserves backward compatibility while allowing triage to pass 100, RCA to pass 2000, and runbook generation to pass 4096+. This eliminates silent truncation without over-allocating tokens on every call.",
+    "distractor_explanations": {
+      "A": "Raising a shared hardcoded limit conflates the token budget of all workflows, forcing triage calls to reserve thousands of tokens they will never use and still leaving runbook generation at risk if outputs exceed 4096. Claude does not self-limit to match workflow intent \u2014 it fills up to max_tokens when the response warrants it.",
+      "B": "Removing max_tokens does not grant more output capacity; the API's default is typically much lower than what runbook generation requires, and the default does not scale with conversation length. This trades a known truncation bug for an unpredictable one governed by API defaults outside the team's control.",
+      "D": "Resubmitting a truncated response as context is architecturally unsound: it doubles latency, increases cost, and can compound errors if the model continues mid-sentence in an inconsistent direction. This treats the symptom rather than fixing the root cause, which is an insufficiently large max_tokens value at request time."
+    }
+  }
+]

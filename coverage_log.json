@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-08",
+  "last_updated": "2026-05-09",
   "exam_format": {
     "total_questions": 60,
     "time_minutes": 120,
@@ -55,14 +55,15 @@
     "Context Management": {
       "exam_weight": 0.15,
       "est_exam_questions": 9,
-      "questions_generated": 8,
-      "foundational": 1,
-      "intermediate": 2,
-      "architect": 5,
+      "questions_generated": 16,
+      "foundational": 3,
+      "intermediate": 6,
+      "architect": 7,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
-        "making_api_calls"
+        "making_api_calls",
+        "multi_turn_conversations"
       ]
     }
   }
