@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-09",
+  "last_updated": "2026-05-10",
   "exam_format": {
     "total_questions": 60,
     "time_minutes": 120,
@@ -10,14 +10,15 @@
     "Agentic Architecture": {
       "exam_weight": 0.27,
       "est_exam_questions": 16,
-      "questions_generated": 11,
+      "questions_generated": 13,
       "foundational": 1,
       "intermediate": 7,
-      "architect": 3,
+      "architect": 5,
       "lessons_covered": [
         "accessing_the_api",
         "getting_an_api_key",
-        "making_api_calls"
+        "making_api_calls",
+        "chat_exercise"
       ]
     },
     "Claude Code Configuration": {
@@ -55,15 +56,16 @@
     "Context Management": {
       "exam_weight": 0.15,
       "est_exam_questions": 9,
-      "questions_generated": 16,
-      "foundational": 3,
+      "questions_generated": 20,
+      "foundational": 5,
       "intermediate": 6,
-      "architect": 7,
+      "architect": 9,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
         "making_api_calls",
-        "multi_turn_conversations"
+        "multi_turn_conversations",
+        "chat_exercise"
       ]
     }
   }

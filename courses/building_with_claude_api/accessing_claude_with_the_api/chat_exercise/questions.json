@@ -1,0 +1,128 @@
+[
+  {
+    "id": "chat_exercise_q001",
+    "domain": "Context Management",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Whether to append the assistant response to the messages list after each API call or discard it",
+    "stem": "A developer builds a terminal-based support chatbot using the Anthropic API. On turn 1, a user asks about a refund policy and receives a detailed response. On turn 2, the user asks 'Can you clarify what you said about processing times?' \u2014 but Claude responds as if no prior exchange occurred. The developer's code appends user messages before each API call but does not append assistant replies. What is the direct architectural cause of this failure?",
+    "options": {
+      "A": "The system prompt is missing, so Claude cannot maintain role consistency across turns.",
+      "B": "The Anthropic API is stateless, and omitting assistant replies from the messages list means Claude receives no record of its prior response when processing turn 2.",
+      "C": "The model's context window was exceeded, causing earlier turns to be silently dropped.",
+      "D": "The developer should switch to a streaming API call, which maintains an open connection that preserves session state between turns."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "plausible misconception"
+    }
+  },
+  {
+    "id": "chat_exercise_q002",
+    "domain": "Context Management",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to append the assistant response to the messages list after each API call or discard it",
+    "stem": "A team is adapting the terminal chatbot pattern \u2014 which uses add_user_message() and add_assistant_message() to grow a shared messages list \u2014 into a production customer service tool. A junior engineer proposes removing the add_assistant_message() call after each API response to reduce the token count sent on subsequent turns. In the first two turns of a test conversation, the change appears to work fine. What will happen starting on turn 3 and why?",
+    "options": {
+      "A": "Performance will improve because fewer tokens are sent per request, and Claude will infer prior assistant context from the user messages alone.",
+      "B": "The chatbot will begin producing responses that ignore prior assistant output, because the messages list contains only user turns and Claude has no mechanism to reconstruct what it previously said.",
+      "C": "Degradation will be gradual and mostly invisible \u2014 Claude will continue to function correctly on most turns but produce slightly less coherent responses when the conversation topic shifts, because the system prompt partially compensates for missing assistant turns.",
+      "D": "Context loss will occur only if the user explicitly references a prior assistant reply; unrelated follow-up questions will continue to work correctly."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "chat_exercise_q003",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Where to persist the messages list \u2014 in-process memory, a cache, or a database \u2014 for a production multi-user chatbot",
+    "stem": "A SaaS company has deployed a customer support chatbot as a Python web API behind a load balancer with four application instances. Within hours of launch, support tickets begin arriving from users reporting that the assistant 'forgets' previous messages mid-conversation, and some users receive responses clearly meant for a different conversation thread. The engineering team confirms that each instance initializes messages as a Python list scoped to the request handler. The team has also confirmed that conversations do not need to survive process restarts, but must remain coherent across the full session. What is the most architecturally sound remediation?",
+    "options": {
+      "A": "Pin each user session to a single application instance using sticky sessions at the load balancer so the in-process messages list is always available for the correct user.",
+      "B": "Externalize the messages list to a distributed cache keyed by session ID so any application instance can reconstruct the full conversation history on each request.",
+      "C": "Serialize the full messages list into a signed, encrypted client-side cookie returned on each response, and reconstruct conversation state server-side by deserializing the cookie on each incoming request.",
+      "D": "Persist the messages list to a relational database table keyed by session ID and user ID to guarantee conversation durability and auditability across all failure modes."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "chat_exercise_q004",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Where to persist the messages list \u2014 in-process memory, a cache, or a database \u2014 for a production multi-user chatbot",
+    "stem": "A team is migrating a terminal chatbot \u2014 built with the same add_user_message(), add_assistant_message(), and chat() loop pattern used in the lab \u2014 into a production FastAPI service deployed across four worker processes behind a load balancer. The messages list is initialized as a module-level variable and mutated inside the request handler. During load testing with 200 simulated concurrent users, engineers observe that roughly 15% of users experience context loss: the assistant responds as if starting a fresh conversation despite the user having exchanged several prior turns. The team is debating three remediation strategies. Which approach correctly identifies the root cause and resolves the context management failure at production scale?",
+    "options": {
+      "A": "The messages list is shared across all requests within a single process, and concurrent requests within the same worker corrupt each other's history. Replacing the module-level list with a request-scoped local variable inside each handler will isolate per-user state correctly.",
+      "B": "The module-level messages list is process-local, so users routed to different workers have no access to each other's history; successive requests from the same user landing on different workers each start with an empty list. Per-session state must be externalized to a distributed cache keyed by session ID so any worker can reconstruct the full messages list for any user on any request.",
+      "C": "The context loss is caused by the load balancer distributing requests unevenly, starving some workers and causing them to drop in-flight state. Enabling sticky sessions at the load balancer layer will ensure each user's requests always reach the same worker, preserving the in-process messages list.",
+      "D": "The add_assistant_message() call is racing against the next incoming request under high concurrency, causing the assistant turn to be omitted from the list before the next user turn is appended. Serializing the append operations with an asyncio.Lock() will restore context coherence without requiring external storage."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "chat_exercise_q009",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Whether to reuse a single Anthropic client instance across all conversational turns or instantiate a new client per API call",
+    "stem": "A team is building a multi-agent orchestration system in which a coordinating agent dispatches subtasks to specialized worker agents. Each worker agent instantiates its own Anthropic client at the start of every tool invocation and tears it down after receiving a response. The orchestrator runs 60 concurrent worker invocations per second. Profiling reveals that connection establishment overhead accounts for 38% of per-invocation latency, and the connection pool is exhausted during burst periods. A senior engineer proposes moving client instantiation out of the per-invocation scope and into the worker agent's initialization lifecycle. A dissenting engineer argues this creates shared mutable state that will corrupt conversation histories across concurrent workers. What is the most architecturally sound resolution?",
+    "options": {
+      "A": "Instantiate one client per worker agent at initialization and reuse it across all invocations, because the Anthropic client holds no per-conversation state \u2014 conversation history lives entirely in the messages list passed per call \u2014 making shared client use safe and connection pooling efficient.",
+      "B": "Instantiate one client per worker agent at initialization but partition the connection pool by conversation ID, because the client does hold lightweight session affinity metadata that must be isolated per conversation to prevent response routing errors under concurrency.",
+      "C": "Keep per-invocation instantiation but introduce an object pool capped at the concurrency limit, because the root cause is pool exhaustion from too many simultaneous connections rather than instantiation frequency, and an object pool addresses this without changing client scoping semantics.",
+      "D": "Move to a single shared client at the orchestrator level and route all worker calls through it, because reducing the total number of client objects to one eliminates connection pool fragmentation entirely and the orchestrator's request queue provides sufficient serialization to prevent state collision."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "plausible misconception",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "chat_exercise_q010",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Whether to reuse a single Anthropic client instance across all conversational turns or instantiate a new client per API call",
+    "stem": "A team is scaling a multi-step autonomous agent \u2014 structured like the lab's chatbot loop, with a module-level `client = Anthropic()` and a `messages` list that the agent extends across observation and action turns \u2014 into a multi-tenant orchestration service. Each incoming task request spawns an independent agent run with its own `messages` list for isolation. A junior engineer argues that since each agent run already gets a fresh `messages` list, the same per-run isolation logic should apply to the client, and proposes instantiating `client = Anthropic()` at the start of every agent run. Under low concurrency the service operates normally, but during a load test with 50 simultaneous agent runs the service crashes with file descriptor exhaustion. What is the fundamental architectural error in the junior engineer's reasoning?",
+    "options": {
+      "A": "The `messages` list should also be instantiated inside the agent orchestrator rather than per-run, because maintaining external per-run state is the root cause of resource contention under concurrent agent execution.",
+      "B": "Per-run `messages` lists do provide agent state isolation, but this isolation model does not extend to the client object \u2014 the client carries no agent-specific state, so per-run instantiation repeatedly destroys and rebuilds underlying connection pools without any isolation benefit, exhausting file descriptors under concurrent load.",
+      "C": "The client should be instantiated once per agent session rather than once per agent run, which would reduce instantiation frequency enough to prevent descriptor exhaustion while still providing the run-level isolation the engineer intended.",
+      "D": "The `Anthropic()` client is not safe to share across concurrent agent runs because it stores mutable state between API calls, so per-run instantiation is architecturally correct and the descriptor exhaustion should be resolved by increasing the OS file descriptor limit."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "clearly-wrong",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "plausible misconception"
+    }
+  }
+]

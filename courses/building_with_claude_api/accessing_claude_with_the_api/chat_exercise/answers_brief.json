@@ -1,0 +1,62 @@
+[
+  {
+    "question_id": "chat_exercise_q001",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic API is stateless: every request is independent, and Claude only sees what the developer explicitly includes in the messages list. By omitting assistant replies, the developer sends turn 2 with only the new user message, so Claude has no record that a prior exchange ever occurred. The full conversational history must be manually reconstructed in each request for multi-turn behavior to work.",
+    "distractor_explanations": {
+      "A": "A missing system prompt affects role and behavioral framing, not conversational memory. Claude would still reference prior turns if assistant replies were present in the messages list, regardless of whether a system prompt exists.",
+      "C": "Context window overflow causes oldest messages to be truncated, but the described symptom is Claude acting as if no prior exchange occurred at all \u2014 consistent with the history never being sent, not with it being dropped mid-conversation.",
+      "D": "Streaming affects how response tokens are delivered to the client, not session persistence. The API remains stateless whether or not streaming is used; no open connection or server-side session state is maintained between calls."
+    }
+  },
+  {
+    "question_id": "chat_exercise_q002",
+    "correct_letter": "B",
+    "correct_explanation": "The multi-turn conversation pattern depends on the messages list containing the complete alternating user/assistant dialogue history. Without add_assistant_message(), Claude receives only user turns starting on turn 3, so it has no record of what it previously said and cannot maintain continuity of its own prior commitments, answers, or reasoning. The model has no inference fallback for reconstructing omitted assistant turns from user messages alone.",
+    "distractor_explanations": {
+      "A": "Claude has no mechanism to infer its own prior responses from user messages alone \u2014 the messages list is the sole source of conversation history passed to the API. Token reduction is real, but it comes at the cost of broken context, not improved performance.",
+      "C": "The system prompt provides instructions and persona, not a record of what Claude actually said in prior turns. Missing assistant turns cause immediate, structural context loss \u2014 not gradual topic-shift degradation.",
+      "D": "Context loss is not conditional on explicit user references. Claude loses access to its prior output on every turn once those messages are excluded, regardless of whether the user acknowledges them."
+    }
+  },
+  {
+    "question_id": "chat_exercise_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Externalizing session state to a distributed cache (e.g., Redis) decouples conversation history from any single process, eliminating both the 'forgetting' and cross-conversation contamination bugs simultaneously. Any of the four instances can retrieve the correct messages list by session ID on every request, satisfying the coherence requirement without over-engineering for durability the team explicitly said they don't need.",
+    "distractor_explanations": {
+      "A": "Sticky sessions trade one failure mode for another: a single instance crash or scale-down event drops the entire in-process state, and it creates uneven load distribution. It also does nothing to fix the root cause\u2014state stored in request-handler scope is still re-initialized on every request regardless of which instance handles it.",
+      "C": "Storing the full messages list in a client-side cookie exposes conversation data to the client, creates a hard size ceiling (~4KB per cookie), and shifts trust of state integrity to the client rather than the server\u2014a security and reliability anti-pattern for multi-turn conversation context.",
+      "D": "A relational database adds durable write overhead and transactional complexity that directly contradicts the team's stated requirement that conversations do not need to survive process restarts. This is over-engineering for a coherence problem, not a durability problem."
+    }
+  },
+  {
+    "question_id": "chat_exercise_q004",
+    "correct_letter": "B",
+    "correct_explanation": "Module-level variables are process-local, meaning each of the four workers holds its own isolated messages list. A user whose requests span multiple workers effectively starts a new conversation on each hit, producing the observed ~15% context loss. Externalizing session state to a distributed cache keyed by session ID makes the full message history available to whichever worker handles any given request.",
+    "distractor_explanations": {
+      "A": "A request-scoped local variable fixes cross-request mutation within a single process, but does nothing about the cross-worker problem \u2014 each worker still holds no knowledge of turns handled by another worker. This misidentifies the failure as intra-process corruption rather than inter-process isolation.",
+      "C": "Sticky sessions are a mitigation, not a fix: they reduce the probability of cross-worker routing but do not eliminate it (worker restarts, scaling events, or load balancer failover all break affinity). This treats a symptom while leaving in-process state as a fragile dependency.",
+      "D": "An asyncio.Lock() addresses a race condition in async append ordering, but the observed failure is deterministic process-local isolation under multi-worker deployment, not a concurrency race. Serializing appends within one process cannot reconstruct history that was written to a different process."
+    }
+  },
+  {
+    "question_id": "chat_exercise_q009",
+    "correct_letter": "A",
+    "correct_explanation": "The Anthropic client is stateless with respect to conversation history \u2014 all conversational context is carried explicitly in the messages array passed with each API call, not stored in the client object itself. This makes a per-worker shared client instance safe under concurrency: workers cannot corrupt each other's histories because no history lives in the client. Reusing the client at initialization scope directly eliminates the 38% connection-overhead penalty and prevents pool exhaustion.",
+    "distractor_explanations": {
+      "B": "The premise is false \u2014 the Anthropic client does not hold session affinity metadata or per-conversation routing state, so there is nothing to partition. This option invents a statefulness problem that doesn't exist in the SDK.",
+      "C": "An object pool addresses pool exhaustion but leaves instantiation overhead in place, only amortizing it under the cap. This treats the symptom (pool exhaustion) while ignoring the root cause (unnecessary per-invocation client construction), and adds pool management complexity with no architectural benefit over option A.",
+      "D": "A single orchestrator-level client introduces a serialization bottleneck: the request queue eliminates the concurrency that worker-level parallelism is designed to provide. Reducing client count to one does not eliminate pool fragmentation \u2014 it creates a single-point throughput constraint instead."
+    }
+  },
+  {
+    "question_id": "chat_exercise_q010",
+    "correct_letter": "B",
+    "correct_explanation": "The junior engineer committed a false analogy: `messages` lists hold per-run conversational state, so per-run instantiation genuinely provides isolation. The `Anthropic()` client holds no agent-specific state \u2014 it exists solely to manage HTTP connection pools \u2014 so per-run instantiation destroys and rebuilds those pools on every call, leaking file descriptors until the OS limit is hit under concurrent load.",
+    "distractor_explanations": {
+      "A": "Inverting the fix \u2014 moving `messages` instantiation into the orchestrator \u2014 eliminates the isolation that actually works and does nothing to address the client's connection pool churn. Per-run `messages` lists are correct design; they are not the resource contention source.",
+      "C": "\"Once per session\" still multiplies client instances proportionally with active sessions, which under concurrent load reproduces the same descriptor exhaustion at a slightly higher threshold. The fix is a single shared client, not a reduction in instantiation frequency.",
+      "D": "The `Anthropic()` client is stateless with respect to agent-specific data; it does not store mutable per-call state that would cause cross-run contamination. Raising the OS file descriptor limit treats the symptom while leaving the architectural waste \u2014 unnecessary per-run pool construction \u2014 intact."
+    }
+  }
+]

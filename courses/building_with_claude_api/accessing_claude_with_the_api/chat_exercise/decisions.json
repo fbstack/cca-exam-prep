@@ -1,0 +1,71 @@
+[
+  {
+    "decision": "Whether to append the assistant response to the messages list after each API call or discard it",
+    "context": "A developer is building a terminal-based customer support chatbot using the Anthropic API. They initialize an empty messages list and append user input before each API call, but are unsure whether to also append the assistant's reply after receiving it.",
+    "options": [
+      "Append only the user message before each call; omit the assistant reply from history",
+      "Append both the user message and the assistant reply to maintain full conversation history",
+      "Store only the last N user messages and discard all assistant turns to save tokens"
+    ],
+    "correct": "Option B: Appending both sides is required. The API has no server-side memory \u2014 the messages list is the only mechanism Claude has to infer prior context. Omitting assistant turns causes Claude to treat every user message as the start of a new conversation.",
+    "constraint": "The Anthropic API is stateless; the full conversation history must be reconstructed and sent on every request for multi-turn coherence to work.",
+    "failure_mode": "Omitting the assistant append causes Claude to lose all conversational context on turn 2 onward. Follow-up questions like 'what did you mean by that?' return answers unrelated to the prior exchange, breaking coherent multi-turn interaction.",
+    "domain": "Context Management",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Where to persist the messages list \u2014 in-process memory, a cache, or a database \u2014 for a production multi-user chatbot",
+    "context": "A team is graduating a working terminal chatbot prototype to a production web API serving hundreds of concurrent users. The prototype stores messages in a Python list in local memory, which works fine for a single session but not for concurrent users or process restarts.",
+    "options": [
+      "Keep the messages list in application memory, scoped to a request handler variable",
+      "Store the messages list in a distributed cache (e.g., Redis) keyed by session ID",
+      "Persist the messages list to a relational database table keyed by session ID and user ID"
+    ],
+    "correct": "Option B or C depending on durability requirements: in-process memory (Option A) fails immediately in multi-process or load-balanced deployments. Redis (Option B) is appropriate for ephemeral sessions. A database (Option C) is required when conversation history must survive process restarts or be auditable.",
+    "constraint": "The messages list pattern scales to production only by externalizing state storage; the API call pattern itself does not change \u2014 the full history is still sent on every request regardless of where it is stored.",
+    "failure_mode": "Using in-process memory in a load-balanced environment causes users routed to different processes to lose all conversation history mid-session, producing incoherent responses and support escalations. Process restarts silently drop all active conversations.",
+    "domain": "Context Management",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "When to set max_tokens to a small value (e.g., 50) versus a large value (e.g., 4096) in a conversational API call",
+    "context": "A developer is configuring API calls for two distinct use cases: a smoke-test health check that verifies the API key and client are wired correctly, and a production customer support agent that must answer complex multi-part questions in full detail.",
+    "options": [
+      "Use a low max_tokens (e.g., 50) for all calls to control cost and latency",
+      "Use a high max_tokens (e.g., 4096) for all calls to avoid truncation",
+      "Use a low max_tokens for smoke tests and validation calls; use a high max_tokens for production conversational turns that may require detailed responses"
+    ],
+    "correct": "Option C: max_tokens is a hard ceiling, not a target. Setting it too low on production conversational calls silently truncates mid-sentence responses. Setting it unnecessarily high on smoke tests wastes tokens and inflates latency on calls whose only purpose is connectivity validation.",
+    "constraint": "max_tokens must be calibrated to the expected output length of the specific call type; there is no single correct value across all use cases in a chatbot application.",
+    "failure_mode": "Using a 50-token ceiling on production support queries causes Claude to truncate answers mid-sentence with no error raised \u2014 users receive incomplete responses that appear to be bugs in the system rather than a configuration mistake.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to use a while True loop with keyboard interrupt or an explicit exit-command check as the conversation loop termination strategy",
+    "context": "An engineer is building a CLI-based internal tool that wraps Claude for developer productivity tasks. The tool will be used interactively at the terminal by engineers who expect standard CLI conventions, and will also be scripted non-interactively in CI pipelines that pipe input from files.",
+    "options": [
+      "Use while True with Ctrl+C as the only exit mechanism, matching the minimal prototype pattern",
+      "Add an explicit exit-command check (e.g., if user_input.lower() == 'exit': break) inside the loop",
+      "Add both an explicit exit command and a session timeout that terminates the loop after N minutes of inactivity"
+    ],
+    "correct": "Option C for production: while True with keyboard interrupt only (Option A) is unscriptable \u2014 piped input from CI pipelines cannot send Ctrl+C, causing the process to hang indefinitely. An explicit exit command (Option B) fixes scripting but not hung sessions. Both mechanisms together handle interactive, scripted, and unattended use cases.",
+    "constraint": "Production CLI tools must be safely operable in both interactive and non-interactive (scripted/automated) contexts; relying solely on keyboard interrupt as the exit mechanism breaks non-interactive execution.",
+    "failure_mode": "A while True loop with no explicit exit command causes CI pipeline jobs that pipe test inputs to the chatbot to hang indefinitely after exhausting input, blocking the pipeline and consuming API quota until the job times out at the infrastructure level.",
+    "domain": "Agentic Architecture",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to reuse a single Anthropic client instance across all conversational turns or instantiate a new client per API call",
+    "context": "A backend service processes conversational API requests at high throughput. A junior engineer suggests instantiating a new Anthropic client object on every incoming request to avoid shared state bugs. A senior engineer proposes a single module-level client instance reused across all requests.",
+    "options": [
+      "Instantiate a new Anthropic client on every request for isolation",
+      "Instantiate a single Anthropic client at application startup and reuse it across all requests"
+    ],
+    "correct": "Option B: The Anthropic client is designed to be reused. It manages connection pooling and HTTP session state internally. Instantiating a new client per request tears down and rebuilds connection pools on every call, adding unnecessary latency and resource churn without providing meaningful isolation benefits, since the client holds no per-conversation state.",
+    "constraint": "Conversation state lives entirely in the messages list passed to each API call, not in the client object itself \u2014 the client is stateless with respect to conversation history and safe to share across concurrent requests.",
+    "failure_mode": "Instantiating a new client per request at high throughput exhausts available file descriptors and socket connections under load, causing connection errors and increased p99 latency that degrades user experience and may trigger cascading failures in dependent services.",
+    "domain": "Claude Code Configuration",
+    "difficulty": "architect"
+  }
+]
