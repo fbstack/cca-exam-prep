@@ -1,0 +1,58 @@
+[
+  {
+    "decision": "Whether to pass system=None or omit the system parameter entirely when no system prompt is needed",
+    "context": "A developer builds a reusable chat() wrapper function used across multiple endpoints \u2014 some require a persona-based system prompt, others are general-purpose. The function must handle both cases without causing API errors.",
+    "options": [
+      "Always pass system=None to the API call for consistency",
+      "Conditionally include the system parameter only when a non-None value is provided",
+      "Always pass an empty string as the system prompt when no persona is needed"
+    ],
+    "correct": "Conditionally include the system parameter only when a non-None value is provided. The Anthropic API rejects system=None and does not treat an empty string as a neutral no-op in the same way omitting the field does.",
+    "constraint": "The Anthropic API does not accept system=None as a valid parameter value, so unconditional inclusion causes a runtime API error on every call that omits a persona.",
+    "failure_mode": "Passing system=None raises an API validation error, breaking all calls that don't require a system prompt and silently corrupting persona-free endpoints if the empty-string fallback alters Claude's default behavior.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Whether to embed the system prompt as a hard-coded string or inject it as a runtime parameter into the chat function",
+    "context": "A team is building a multi-tenant tutoring platform where different subjects (math, history, science) require distinct personas and instruction sets. They need a single API integration layer that serves all subjects without duplicating code.",
+    "options": [
+      "Hard-code a single system prompt string at the module level for the primary use case",
+      "Accept the system prompt as a parameter to the chat function, defaulting to None when omitted",
+      "Build a separate chat function per persona to keep each fully self-contained"
+    ],
+    "correct": "Accept the system prompt as a parameter to the chat function. This makes the function reusable across all subject personas without code duplication, while still allowing calls with no system prompt for general-purpose use.",
+    "constraint": "A multi-tenant or multi-persona application cannot hard-code a single system prompt without locking the integration layer to one behavioral mode, forcing either code duplication or runtime string mutation.",
+    "failure_mode": "Hard-coding the system prompt means every new persona requires a new function or module, creating maintenance drift where persona logic becomes inconsistent across the codebase; a single-function-per-persona approach multiplies dead code as subjects scale.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "How to write a system prompt that enforces pedagogical constraints (guiding rather than answering) without making Claude too restrictive to be useful",
+    "context": "A production math tutoring app receives complaints that Claude sometimes gives away full solutions despite a 'do not answer directly' instruction, while other times it refuses to confirm a correct student answer at all. The product team must decide how precisely to specify behavioral constraints in the system prompt.",
+    "options": [
+      "Use a single broad negative constraint: 'Do not give direct answers'",
+      "Combine a role persona ('You are a patient math tutor') with explicit behavioral rules ('Give hints first, confirm correctness when the student reaches the right answer, show worked examples only for analogous problems')",
+      "Enumerate every forbidden output pattern to prevent Claude from finding edge-case workarounds"
+    ],
+    "correct": "Combine a role persona with explicit positive behavioral rules. A persona alone gives Claude insufficient guidance for edge cases, while exhaustive negative constraints create over-refusal and brittleness. Positive rules ('give hints first', 'confirm correct answers') define the desired behavior space rather than only excluding bad behavior.",
+    "constraint": "In a production pedagogical application, both under-specification (persona only) and over-specification (exhaustive prohibitions) degrade user experience \u2014 the former causes policy leakage, the latter causes false refusals that frustrate students who deserve confirmation.",
+    "failure_mode": "Under-specification causes Claude to occasionally short-circuit to full solutions when phrasing varies, undermining the learning objective; over-specification with negative-only constraints causes Claude to refuse to confirm a student's correct answer, breaking trust and halting learning progress.",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Whether to use a low max_tokens ceiling for smoke-test calls versus a higher ceiling for production tutoring responses",
+    "context": "A developer uses the same chat() wrapper for both initial API connectivity tests and live student interactions. During load testing, they notice some tutoring responses are being truncated mid-explanation, while smoke-test calls are consuming unnecessary token budget.",
+    "options": [
+      "Set a single global max_tokens value of 50 for all calls to control cost",
+      "Set max_tokens to 4096 globally to ensure no response is ever truncated",
+      "Parameterize max_tokens per call type \u2014 low ceiling for smoke tests, higher ceiling for production tutoring responses"
+    ],
+    "correct": "Parameterize max_tokens per call type. Smoke tests need only a short confirmation response (50 tokens is appropriate), while tutoring responses that walk through multi-step problems may require 500\u20131000+ tokens to complete a coherent explanation without truncation.",
+    "constraint": "max_tokens is a hard ceiling, not a target \u2014 Claude stops generating mid-sentence when the limit is hit. Tutoring explanations require enough headroom to complete multi-step reasoning, while smoke tests should be cheap and fast.",
+    "failure_mode": "A global low max_tokens (e.g., 50) truncates tutoring responses mid-step, leaving students with incomplete and confusing guidance; a global high max_tokens wastes tokens and cost on smoke-test calls that need only a one-sentence confirmation.",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  }
+]

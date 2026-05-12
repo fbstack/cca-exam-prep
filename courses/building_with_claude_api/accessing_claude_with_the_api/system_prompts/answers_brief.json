@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": "system_prompts_q001",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic API rejects an explicit system=None as an invalid parameter value\u2014the correct way to omit a system prompt is to not include the parameter at all. Conditionally including system in the request payload only when a real value exists satisfies the API contract without requiring any other changes. This fixes the validation errors at their source rather than working around them.",
+    "distractor_explanations": {
+      "A": "An empty string is still an invalid value for the system parameter on the Anthropic API, so this substitution produces the same validation error. The failure mode is value invalidity, not parameter absence.",
+      "C": "The errors are deterministic API validation failures, not transient network issues, so retrying reproduces the same rejection on every attempt. A retry loop addresses reliability, not contract violations.",
+      "D": "Adding a filler system prompt sidesteps the bug instead of fixing it, and actively changes model behavior for triage calls by injecting an unintended persona constraint. The root cause\u2014passing an invalid parameter\u2014remains unresolved."
+    }
+  },
+  {
+    "question_id": "system_prompts_q002",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic API rejects an explicit system=None because it violates the parameter's type contract \u2014 the field must either be a valid string or absent entirely. Guarding the argument with a conditional (e.g., only adding 'system' to the kwargs dict when a value is provided) keeps the API call well-formed for both use cases without changing behavior when a prompt is supplied.",
+    "distractor_explanations": {
+      "A": "An empty string is still an invalid value for the system parameter on this API \u2014 it fails the same type/validation check as None, just with a different falsy value.",
+      "C": "Retry-on-failure masks the root cause and adds latency to every ad-hoc call; it also relies on the error path being stable, which is not guaranteed across API versions.",
+      "D": "Whitespace-only strings are still rejected by the API's validation rules; beyond that, any non-empty string sent as a system prompt does alter Claude's context, so the behavioral claim is also false."
+    }
+  },
+  {
+    "question_id": "system_prompts_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Injecting the system prompt as a parameter applies the single-responsibility principle: one function handles the chat mechanics while the caller controls persona behavior. This eliminates code duplication and makes adding new categories a matter of passing a new prompt string, not cloning or modifying functions. Defaulting to None preserves backward compatibility while keeping the interface clean.",
+    "distractor_explanations": {
+      "A": "Consolidating all personas into one prompt with conditional logic shifts control-flow complexity into the prompt itself, making it fragile and harder to test. Each category's behavior becomes entangled, and a misdetected intent silently applies the wrong persona.",
+      "C": "Separate functions per category is the pattern the team already has and is the source of the scaling problem. Maintaining persona isolation through code duplication means every shared fix or update must be applied to N functions, not one.",
+      "D": "Fetching the prompt from a database inside a hard-coded function trades one form of rigidity for another: the function still owns the lookup logic, and the database dependency adds latency and failure modes without solving the core duplication issue."
+    }
+  },
+  {
+    "question_id": "system_prompts_q005",
+    "correct_letter": "B",
+    "correct_explanation": "Prohibition-only prompts create ambiguity gaps: any action not explicitly carved out defaults to refusal, which caused the escalation spike. Replacing prohibitions with a positive behavioral specification \u2014 role definition, stage-by-stage guidance, and targeted prohibitions only for high-risk actions \u2014 gives Claude a complete behavioral model rather than a list of blocked exits. This architecture is robust because permitted actions are defined directly, not inferred from what wasn't prohibited.",
+    "distractor_explanations": {
+      "A": "Appending negative carve-outs to a prohibition list compounds the original problem: the system still defaults to refusal for any action not explicitly exempted, requiring exhaustive enumeration of every permitted behavior. This approach scales poorly and leaves new edge cases unhandled.",
+      "C": "Moving constraints to per-turn user instructions introduces a trust boundary violation \u2014 user-turn instructions carry less authority than system prompt instructions and can be overridden or contradicted by user input. This also exposes business-critical constraints to runtime modification, increasing compliance risk rather than reducing brittleness.",
+      "D": "Routing ambiguous cases to human agents on every uncertain decision defeats the purpose of deploying Claude for support and amplifies the escalation problem rather than solving it. It also fails architecturally because it treats the symptom (uncertainty) without addressing the root cause (underspecified permitted behaviors)."
+    }
+  },
+  {
+    "question_id": "system_prompts_q006",
+    "correct_letter": "B",
+    "correct_explanation": "The rule 'request clarification instead' sets no minimum threshold for when uncertainty justifies interruption, so Claude treats any non-zero ambiguity as a trigger condition. Adding a specificity constraint \u2014 'only when the field cannot be inferred from surrounding context' \u2014 redefines the trigger from 'any uncertainty' to 'genuinely unresolvable uncertainty,' which is what the human reviewers are implicitly applying. This is a precision problem in the behavioral rule itself, not in the schema or the persona.",
+    "distractor_explanations": {
+      "A": "Persona-rule conflict is not a recognized failure mode here \u2014 Claude does not resolve logical tension between a role label and a behavioral rule by lowering its ambiguity threshold. Removing the persona leaves the underspecified trigger condition unchanged and will not reduce clarification rate.",
+      "C": "Few-shot examples address calibration through demonstration, which is a valid technique, but they treat a symptom rather than the cause. The behavioral rule itself still has no trigger threshold, so the model remains structurally predisposed to over-flag unless the rule is corrected directly.",
+      "D": "Reducing the number of extraction fields changes the schema, not the clarification trigger condition, so the same over-flagging behavior applies to whichever fields remain. The backlog is caused by a too-permissive rule, not by schema breadth."
+    }
+  },
+  {
+    "question_id": "system_prompts_q007",
+    "correct_letter": "B",
+    "correct_explanation": "max_tokens acts as an absolute hard stop \u2014 the API returns whatever tokens have been generated at that cutoff, with no awareness of sentence boundaries, step completeness, or logical coherence. A 50-token ceiling on multi-step troubleshooting responses will silently produce truncated mid-instruction outputs that appear valid but leave customers with dangerously incomplete guidance. The fix requires differentiating token ceilings by call type: a low ceiling for health-check pings and an appropriate ceiling for production responses.",
+    "distractor_explanations": {
+      "A": "Claude does not raise an error when max_tokens is reached \u2014 it returns the truncated output silently with a stop_reason of 'max_tokens'. The health-check loop continues functioning; the damage is to response completeness, not API availability.",
+      "C": "Claude does not dynamically reallocate attention based on the max_tokens budget. This misattributes a generation-length parameter with a mechanism that affects internal model computation, which is not how the parameter works.",
+      "D": "Separating the client instance is a reasonable infrastructure improvement but does not resolve the core problem. Even with separate clients, assigning the wrong max_tokens to either call type still produces truncated responses \u2014 the architectural flaw is the single global ceiling, not the shared wrapper object."
+    }
+  },
+  {
+    "question_id": "system_prompts_q008",
+    "correct_letter": "C",
+    "correct_explanation": "Parameterizing max_tokens per call type applies the right ceiling to each workload: a 50-token ceiling forces smoke tests to return only a brief confirmation, freeing the budget for extraction calls that need 1500 tokens to emit complete structured fields. This eliminates truncation and reduces overall token spend simultaneously because smoke tests no longer consume 900\u2013950 tokens on verbose output.",
+    "distractor_explanations": {
+      "A": "Prompt instructions influence response style but do not enforce a hard token ceiling \u2014 Claude may still generate verbose output up to max_tokens=1000, so extraction calls remain at risk of truncation and smoke-test spend is only loosely controlled.",
+      "B": "Raising the global ceiling to 4096 stops truncation but directly contradicts the requirement to avoid increasing overall token spend; it also wastes budget on smoke tests that need only a short confirmation.",
+      "D": "Removing the system prompt changes Claude's persona but does not cap token output, so smoke tests can still generate lengthy responses up to max_tokens=1000; extraction calls remain truncated at the same ceiling."
+    }
+  },
+  {
+    "question_id": "system_prompts_q004",
+    "correct_letter": "B",
+    "correct_explanation": "The root cause is a configuration gap: the system parameter defaults to None, so behavioral constraints are never established when callers omit it. Patching each user message treats a structural absence as a per-call content problem, which is brittle and misplaces responsibility. The architecturally sound fix is to pass a system prompt at the call level so the extraction role and format requirement are guaranteed to be present on every invocation.",
+    "distractor_explanations": {
+      "A": "User-message instructions are processed differently from system prompts and do not reliably enforce output structure the same way \u2014 the None default remains an unclosed gap that will produce inconsistent behavior across callers who omit the parameter.",
+      "C": "JSON mode enforces syntactic validity but does not define the extraction role or schema; it also requires every caller to set the parameter, which perpetuates the same configuration-gap problem rather than fixing it at the function level.",
+      "D": "System prompts are not cached in a way that makes them unavailable to subsequent turns \u2014 this misrepresents how context windows work. Duplicating instructions into both locations does not address the real problem, which is that the system prompt is absent by default, not insufficient."
+    }
+  }
+]

@@ -1,0 +1,170 @@
+[
+  {
+    "id": "system_prompts_q001",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Whether to pass system=None or omit the system parameter entirely when no system prompt is needed",
+    "stem": "A team is building a customer support resolution agent that routes tickets to either a persona-driven specialist handler (with a system prompt) or a general triage handler (no persona required). Their shared chat() wrapper unconditionally passes system=None for triage calls. After deployment, all triage calls begin returning API validation errors while specialist calls succeed. What is the most direct fix?",
+    "options": {
+      "A": "Replace system=None with an empty string so the parameter is always present but neutral",
+      "B": "Update the wrapper to include the system parameter in the API call only when a non-None value is provided",
+      "C": "Add a retry loop around triage calls so transient validation errors are handled automatically",
+      "D": "Set a default system prompt for triage calls instructing Claude to behave generically"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_q002",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to pass system=None or omit the system parameter entirely when no system prompt is needed",
+    "stem": "A team is extending a structured data extraction pipeline by wrapping client.messages.create() \u2014 the same pattern used in the lab's smoke-test cell \u2014 into a reusable extract() function. Some extraction tasks require a strict JSON-output system prompt; others are ad-hoc and need no system prompt at all. A junior engineer writes the wrapper so it always passes system=kwargs.get('system', None) to the API call. During integration testing, every ad-hoc extraction call fails with an API validation error. What change to the wrapper will resolve this?",
+    "options": {
+      "A": "Change the default fallback from None to an empty string so the parameter is always a valid type",
+      "B": "Guard the system argument so it is only included in the API call when the caller passes a non-None value",
+      "C": "Catch the validation error and retry the call without the system parameter on failure",
+      "D": "Pass a whitespace-only string as the default so the API accepts the parameter without altering Claude's behavior"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to embed the system prompt as a hard-coded string or inject it as a runtime parameter into the chat function",
+    "stem": "A team is building a customer support resolution agent that handles billing inquiries, technical issues, and account management. Each category requires a distinct persona: billing agents use formal compliance-aware language, technical agents use diagnostic questioning, and account agents use empathetic retention-focused tone. The team's current implementation has a single chat function with the billing persona hard-coded at the module level, and two separate cloned functions for the other categories. Support volume is growing and the team is about to add three more categories. What is the most architecturally sound approach for managing system prompt behavior across all categories?",
+    "options": {
+      "A": "Consolidate all persona instructions into a single comprehensive system prompt using conditional language so one prompt handles all categories based on detected intent.",
+      "B": "Refactor the chat function to accept the system prompt as a parameter, defaulting to None, so the same function serves all personas without code duplication.",
+      "C": "Keep separate functions per persona to maintain clear boundaries and avoid accidental cross-contamination of persona behavior between categories.",
+      "D": "Store each system prompt in a database and retrieve the appropriate one inside the hard-coded function using a category lookup at call time."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to embed the system prompt as a hard-coded string or inject it as a runtime parameter into the chat function",
+    "stem": "A team is building a structured data extraction pipeline that parses customer support tickets into JSON. Their chat function accepts a system prompt as a parameter defaulting to None \u2014 the same pattern used in the lab's flexible chat function. When the system parameter is omitted, the pipeline occasionally returns prose summaries instead of JSON objects, causing downstream parsing failures. A junior engineer proposes fixing this by prepending 'Return your response as a JSON object.' to every user message in the messages list rather than changing the function signature. What is the most architecturally sound assessment of this proposal?",
+    "options": {
+      "A": "The proposal will work reliably \u2014 embedding format instructions in the user message is functionally equivalent to a system prompt for output structure constraints, so the None default is not a concern.",
+      "B": "The proposal treats a configuration gap as a per-message problem. The correct fix is to pass a system prompt that establishes the extraction role and JSON format requirement at the call level, so behavioral guidance is always present regardless of how the function is invoked.",
+      "C": "The proposal is unnecessary \u2014 enabling JSON mode via a response_format parameter is the correct fix, since it enforces structured output at the API level without modifying either the system prompt or the user messages.",
+      "D": "The proposal is directionally correct but incomplete: format instructions should be placed in the user message AND the system prompt, because system prompts are cached and may not apply to subsequent turns in a multi-turn extraction session."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_q005",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "How to write a system prompt that enforces pedagogical constraints (guiding rather than answering) without making Claude too restrictive to be useful",
+    "stem": "A customer support platform deploys Claude to handle warranty claims. The system prompt reads: 'Do not approve or deny claims. Do not quote policy numbers. Do not state coverage amounts. Do not promise any resolution timeline.' After two weeks, support managers report that agents are escalating routine claims at three times the expected rate because Claude refuses to confirm even that a claim has been received and is under review. The team debates how to fix the prompt. What is the most architecturally sound approach?",
+    "options": {
+      "A": "Append a list of explicit exceptions to the prohibition list \u2014 'Do not approve or deny claims, except to confirm receipt and active review status' \u2014 so Claude has precise negative carve-outs for each permitted action.",
+      "B": "Replace the prohibition-only constraints with a persona and positive behavioral rules: define the agent's role, specify what it should do at each stage of a claim interaction, and reserve prohibitions only for actions with genuine legal or business risk.",
+      "C": "Move all behavioral constraints from the system prompt into per-turn user instructions so that support managers can tune restrictions without redeployment, reducing the brittleness of centralized negative rules.",
+      "D": "Add a fallback instruction: 'If you are uncertain whether an action is permitted, ask the customer to hold while you consult a human agent.' This prevents false refusals by routing ambiguous cases out of the model's decision space."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_q006",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "How to write a system prompt that enforces pedagogical constraints (guiding rather than answering) without making Claude too restrictive to be useful",
+    "stem": "A team building a structured data extraction pipeline has adopted the system prompt pattern from their onboarding lab \u2014 a role persona string combined with explicit behavioral rules \u2014 and applied it to a customer support triage agent. The system prompt reads: 'You are a precise data extraction assistant. Identify claim type, product category, and customer sentiment. Do not interpret ambiguous fields; request clarification instead.' In production, the agent correctly extracts clean records 94% of the time but sends clarification requests on 31% of tickets, creating a backlog. A review of the flagged tickets shows most contain standard phrasing that a human reviewer would classify without hesitation. What is the most likely architectural cause and the correct fix?",
+    "options": {
+      "A": "The role persona conflicts with the behavioral rules because 'precise extraction assistant' implies completeness while 'request clarification' implies incompleteness; removing the persona will reduce the ambiguity threshold the model applies.",
+      "B": "The positive behavioral rule 'request clarification instead' lacks a specificity threshold, so Claude applies it to any uncertainty rather than only to genuinely unclassifiable inputs; adding a concrete condition \u2014 such as 'only when the field cannot be inferred from surrounding context' \u2014 will constrain the trigger.",
+      "C": "The system prompt is correctly structured but the model needs few-shot examples of ambiguous tickets that were correctly classified without clarification so it can calibrate its uncertainty threshold against real production patterns.",
+      "D": "The clarification rate indicates the extraction schema is too broad; reducing the number of fields Claude is asked to extract will lower the surface area for ambiguity and bring the clarification rate within acceptable bounds."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to use a low max_tokens ceiling for smoke-test calls versus a higher ceiling for production tutoring responses",
+    "stem": "A customer support resolution agent uses a single shared API wrapper for both health-check pings (sent every 60 seconds to verify connectivity) and live customer-facing responses that walk through multi-step troubleshooting flows. After a production incident, the team discovers that some troubleshooting explanations are being cut off mid-step, leaving customers with incomplete instructions. The on-call engineer proposes setting a global max_tokens of 50 to cap costs across all call types. What is the most architecturally sound reason to reject this proposal?",
+    "options": {
+      "A": "A max_tokens of 50 will cause Claude to return an error for long responses rather than truncating them, breaking the health-check loop entirely.",
+      "B": "max_tokens is a hard ceiling, not a soft suggestion \u2014 Claude stops generating at exactly that token count regardless of sentence or reasoning completeness, so a 50-token ceiling will silently truncate multi-step troubleshooting responses mid-explanation rather than completing a coherent answer.",
+      "C": "Setting a low global max_tokens will degrade model quality because Claude allocates less attention to earlier tokens when it knows the budget is constrained.",
+      "D": "Health-check pings should not use the same API wrapper as customer-facing calls at all, so the correct fix is to create a separate client instance for monitoring rather than adjusting max_tokens."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "clearly-wrong",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "system_prompts_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to use a low max_tokens ceiling for smoke-test calls versus a higher ceiling for production tutoring responses",
+    "stem": "A team is building a structured data extraction pipeline that uses a shared messages.create() call \u2014 configured similarly to the math tutor example in the lab, with max_tokens=1000 and a system prompt \u2014 to both verify API connectivity at startup and perform full invoice field extraction in production. During staging load tests, the team notices that startup smoke-test calls consistently consume 900\u2013950 tokens returning verbose self-introduction text, while some extraction responses are being truncated before all structured fields are emitted. The team wants to fix truncation without increasing overall token spend. What is the correct architectural change?",
+    "options": {
+      "A": "Add an explicit instruction to the system prompt telling Claude to be concise on all calls, which will reduce token usage for smoke tests while leaving extraction headroom unchanged.",
+      "B": "Increase max_tokens to 4096 globally so that neither smoke tests nor extraction responses are ever truncated, accepting the cost increase as necessary for production reliability.",
+      "C": "Parameterize max_tokens per call type \u2014 pass a low ceiling (e.g., 50) for startup connectivity checks that need only a short confirmation, and a higher ceiling (e.g., 1500) for extraction calls that must emit complete structured output.",
+      "D": "Move the system prompt out of smoke-test calls so Claude defaults to a shorter response style, and keep max_tokens=1000 globally for extraction calls."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "near-miss",
+      "C": "correct",
+      "D": "clearly-wrong"
+    }
+  }
+]
