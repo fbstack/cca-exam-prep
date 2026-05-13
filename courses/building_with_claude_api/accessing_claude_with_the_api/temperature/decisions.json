@@ -1,0 +1,72 @@
+[
+  {
+    "decision": "Whether to set temperature to 0.0 or 1.0 when building a code generation assistant",
+    "context": "A team is deploying a coding assistant that generates Python functions from natural language descriptions. They debate whether to use the default temperature of 1.0 or override it. Incorrect code costs engineers hours of debugging.",
+    "options": [
+      "Use temperature 1.0 (default) for more varied responses",
+      "Use temperature 0.0 for deterministic, predictable code output",
+      "Use temperature 0.5 as a balanced middle ground"
+    ],
+    "correct": "Option B: temperature 0.0. Code generation requires correctness and consistency \u2014 the highest-probability token is almost always the syntactically and semantically correct one. Determinism also makes the output testable and reproducible.",
+    "constraint": "The task has a single correct answer (valid, working code) rather than a spectrum of acceptable creative outputs.",
+    "failure_mode": "At high temperature, Claude introduces random token variation that produces syntactically broken code, uses incorrect variable names, or selects wrong library calls \u2014 bugs that are hard to trace back to the parameter setting.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Whether to hardcode a fixed temperature value or expose it as a configurable parameter when wrapping the Claude API in a shared internal service",
+    "context": "A platform team is building a centralized Claude wrapper used by five product teams \u2014 one doing customer support summarization, one doing brainstorming, one doing data extraction, one doing marketing copy, and one doing code review. Each team calls the same endpoint.",
+    "options": [
+      "Hardcode temperature=0.7 as a reasonable default for all use cases",
+      "Expose temperature as a required caller-supplied parameter with no default",
+      "Expose temperature as an optional parameter with a sensible per-use-case default, validated against task-type ranges"
+    ],
+    "correct": "Option C: expose temperature as an optional parameter with defaults validated against task type. This allows each team to tune for their domain while preventing misconfiguration \u2014 e.g., rejecting temperature=0.9 for a data extraction endpoint.",
+    "constraint": "The service spans tasks with fundamentally different accuracy vs. creativity requirements, so a single fixed value will degrade at least some use cases.",
+    "failure_mode": "Hardcoding temperature=0.7 causes the data extraction team to receive hallucinated field values and the brainstorming team to receive repetitive, low-diversity ideas \u2014 both silently, with no error to trigger investigation.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "How to set temperature for an agentic subagent that must choose between tool calls mid-pipeline when errors are costly and irreversible",
+    "context": "An orchestration pipeline uses a subagent to decide which of three database mutation tools to invoke based on parsed user intent. The mutations (delete, archive, update) are irreversible without a manual rollback process. The orchestrator runs unattended overnight.",
+    "options": [
+      "Use temperature 0.0 to ensure the subagent always picks the highest-confidence tool deterministically",
+      "Use temperature 0.7 to allow the agent some flexibility in ambiguous cases",
+      "Use temperature 1.0 to maximize the agent's ability to explore creative interpretations of user intent"
+    ],
+    "correct": "Option A: temperature 0.0. For irreversible agentic tool selection, determinism is required. The subagent must make the same decision given the same inputs, and any randomness risks invoking a destructive tool (delete vs. archive) based on a low-probability token flip.",
+    "constraint": "Minimal-footprint and human-in-the-loop principles require that autonomous agents take the safest, most predictable action path when mistakes cannot be automatically recovered.",
+    "failure_mode": "At temperature 0.7+, a marginally ambiguous intent description causes the subagent to invoke 'delete' instead of 'archive' on a non-deterministic token draw. The batch job completes overnight, data is permanently lost, and no error log indicates temperature as the root cause.",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Whether to vary temperature based on the turn position in a multi-turn conversation designed to help users iteratively refine a creative brief",
+    "context": "A marketing tool uses a multi-turn conversation pattern: early turns gather structured requirements (budget, audience, constraints), and later turns generate the actual creative copy. The same chat function handles all turns.",
+    "options": [
+      "Use the same temperature (0.5) for all turns regardless of phase",
+      "Use low temperature (0.1-0.2) for requirement-gathering turns and high temperature (0.8-1.0) for creative generation turns",
+      "Use high temperature (0.9) for all turns to keep the conversation engaging throughout"
+    ],
+    "correct": "Option B: vary temperature by conversation phase. Requirement-gathering needs precise extraction of structured data (low temperature), while creative generation benefits from high variance output (high temperature). The same parameter value cannot optimize both.",
+    "constraint": "Multi-turn conversation design must account for the fact that different turns serve fundamentally different functions \u2014 extraction vs. generation \u2014 which have opposite temperature requirements.",
+    "failure_mode": "Using temperature 0.9 throughout causes the requirement-extraction turns to hallucinate or misparse budget figures and audience segments, poisoning the creative brief with incorrect constraints \u2014 errors that propagate silently into the final generated copy.",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to document the expected temperature range in a slash command definition or rely on callers to supply it correctly",
+    "context": "A Claude Code deployment includes a /generate-test-cases slash command used by 12 engineers. The command calls Claude to produce unit tests. Some engineers override temperature manually; others use the default. Test quality is inconsistent across the team.",
+    "options": [
+      "Leave temperature undocumented and let each engineer decide at call time",
+      "Hardcode temperature=0.2 inside the slash command definition so callers cannot override it",
+      "Document the recommended temperature range (0.1-0.3) in the slash command's CLAUDE.md entry and enforce it via a settings.json default"
+    ],
+    "correct": "Option C: document the range in CLAUDE.md and enforce a default via settings.json. This communicates intent to the team while allowing legitimate overrides for edge cases, and the settings hierarchy ensures the default applies when no override is given.",
+    "constraint": "CLAUDE.md is the authoritative documentation layer for Claude Code configuration; pairing documentation with a settings.json default creates both discoverability and enforcement without removing engineering flexibility.",
+    "failure_mode": "Without documented defaults, engineers experimenting with temperature=0.9 for test generation produce non-deterministic, syntactically invalid test cases that pass linting but fail at runtime \u2014 and the inconsistency is attributed to model quality rather than misconfiguration.",
+    "domain": "Claude Code Configuration",
+    "difficulty": "architect"
+  }
+]

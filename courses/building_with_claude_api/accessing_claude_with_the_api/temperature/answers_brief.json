@@ -1,0 +1,102 @@
+[
+  {
+    "question_id": "temperature_q002",
+    "correct_letter": "A",
+    "correct_explanation": "Setting `temperature=0.0` eliminates sampling randomness by forcing the model to always select the highest-probability token, making output deterministic for identical inputs. This directly addresses the root cause \u2014 stochastic sampling \u2014 rather than masking it with retry logic. For code generation tasks requiring consistent, reproducible logic, deterministic output is the correct architectural choice.",
+    "distractor_explanations": {
+      "B": "Reducing temperature to 0.5 only shrinks the variance window; it does not eliminate it, so the retry-match strategy still fails under load or subtle input differences. This treats the symptom instead of removing the stochastic source entirely.",
+      "C": "Increasing `max_tokens` expands the response length budget but has no effect on sampling randomness, which is controlled exclusively by `temperature`. More tokens to reason does not prevent the model from choosing different logic branches on different runs.",
+      "D": "Message placement (system vs. user) affects how the model weights context, not whether sampling is deterministic. Without setting `temperature=0.0`, output variance persists regardless of where the routing instructions appear."
+    }
+  },
+  {
+    "question_id": "temperature_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Temperature 0.7 widens the sampling distribution, introducing randomness that benefits open-ended generation but actively undermines deterministic tasks like structured data extraction. The root cause is a shared parameter that imposes a one-size-fits-all sampling strategy on tasks with fundamentally different accuracy requirements. Exposing temperature as a per-task configurable parameter\u2014with a low default (e.g., 0.0\u20130.2) for extraction and a higher one for support\u2014fixes the source of the problem rather than working around it.",
+    "distractor_explanations": {
+      "A": "Stricter output constraints reduce the model's ability to produce malformed structure, but they do not narrow the probability distribution that temperature controls\u2014high temperature still causes the model to sample less probable token values for field content, perpetuating hallucination.",
+      "C": "Model size affects capability and knowledge, not the stochasticity introduced by temperature; a larger model at 0.7 temperature still samples from a wider distribution than an extraction task requires.",
+      "D": "Retry-on-failure masks the symptom rather than correcting the sampling behavior causing it, increases latency and API cost, and provides no guarantee of convergence if the temperature is consistently pushing outputs out of distribution."
+    }
+  },
+  {
+    "question_id": "temperature_q004",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic client is stateless and holds no per-request configuration, so temperature belongs at the call site, not at instantiation. Accepting temperature as an optional call-time parameter lets each caller control inference behavior independently while the shared client remains unchanged. Validated per-task defaults preserve safety without burdening callers with mandatory boilerplate.",
+    "distractor_explanations": {
+      "A": "The Anthropic client carries no temperature state between calls, so multiplying clients buys nothing. This introduces unnecessary resource overhead to solve a problem that doesn't exist at the client level.",
+      "C": "Environment variables are process-scoped globals, not per-request values. Reloading them per request creates a race condition when concurrent callers with different temperature preferences hit the service simultaneously.",
+      "D": "Forcing temperature as a required parameter shifts the burden of a server-side default to every caller, breaking backward compatibility and creating friction without adding safety \u2014 callers can still supply wrong values."
+    }
+  },
+  {
+    "question_id": "temperature_q005",
+    "correct_letter": "B",
+    "correct_explanation": "The root failure is not temperature variance but the absence of a confidence gate before irreversible actions. Confidence scoring decouples the routing decision's uncertainty from the action's consequence, ensuring that ambiguous inputs never reach a destructive tool unreviewed. Adjusting temperature alone cannot distinguish between a high-confidence edge case and a genuinely ambiguous input that warrants human judgment.",
+    "distractor_explanations": {
+      "A": "Temperature 0.0 forces deterministic selection of the highest-probability token, but if the model's top choice on an ambiguous input is permanent_delete, determinism locks in the wrong answer every time. This treats variance as the enemy when the real problem is unguarded ambiguity reaching irreversible tooling.",
+      "C": "Reducing temperature narrows the probability distribution but still allows the subagent to autonomously invoke irreversible tools on inputs the model itself rates as low-confidence. The incident was caused by ambiguous inputs reaching destructive actions, not by excessive randomness on clear inputs.",
+      "D": "Majority-vote sampling aggregates stochastic draws, but if the model's distribution favors permanent_delete on an ambiguous input, two of three draws will still select it. This amplifies sampling cost without addressing the architectural gap of unreviewed irreversible mutations."
+    }
+  },
+  {
+    "question_id": "temperature_q006",
+    "correct_letter": "B",
+    "correct_explanation": "Temperature is a per-call sampling parameter resolved at inference time; client instantiation pattern is irrelevant because no sampling state persists between calls. At temperature 0.6, tokens with similar log-probabilities compete, so ambiguous records non-deterministically resolve to the wrong tool at a predictable rate. For irreversible mutations, temperature must be 0.0 to force greedy decoding and eliminate that stochasticity entirely.",
+    "distractor_explanations": {
+      "A": "This conflates client-side object state with model-side inference behavior. Temperature is sent as a parameter on each API request and governs sampling independently of how the client is instantiated \u2014 re-instantiation changes nothing about the model's sampling process.",
+      "C": "There is no 'prompt drift' mechanism introduced by per-stage client instantiation; each API call is fully stateless by design. Consolidating clients does not affect temperature sampling and therefore cannot stabilize routing.",
+      "D": "Tool descriptions constrain the output format but do not flatten the probability distribution over which tool is selected. At temperature 0.6, logit differences between plausible-but-wrong tools remain exploitable by sampling, making misrouting on ambiguous inputs a statistical certainty at sufficient volume."
+    }
+  },
+  {
+    "question_id": "temperature_q001",
+    "correct_letter": "B",
+    "correct_explanation": "Temperature controls the randomness of token sampling: at 0.0, the model always selects the highest-probability token, eliminating the stochastic variation that causes 'customer_id' to appear as 'customerId' in one run and 'cust_id' in another. When a schema is fully specified and deterministic output is required, temperature 0.0 is the direct fix \u2014 the field name inconsistency is a sampling problem, not a prompt problem.",
+    "distractor_explanations": {
+      "A": "Temperature 0.5 still introduces randomness into token selection, so field name drift persists across runs \u2014 it reduces variance but does not eliminate it. Consistency problems require determinism, not compromise.",
+      "C": "Raising temperature to 1.0 amplifies the exact failure mode the team is trying to fix, increasing the probability of sampling lower-ranked tokens like 'customerId' instead of 'customer_id'. Relying on post-processing to compensate for intentionally introduced randomness adds fragile downstream complexity.",
+      "D": "Splitting temperature by ticket priority creates two inconsistent output regimes and still leaves standard tickets subject to field name variation at 0.7. The schema requirement applies uniformly \u2014 output format consistency is not a function of ticket priority."
+    }
+  },
+  {
+    "question_id": "temperature_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Phase-dependent temperature is the correct architectural pattern here: structured data capture requires low temperature to enforce schema compliance and prevent hallucinated field values, while creative generation requires high temperature to produce client-differentiated phrasing. Using a single fixed temperature forces a trade-off that fails one phase or the other. Varying the parameter by conversation phase resolves the formulaic output without compromising data integrity.",
+    "distractor_explanations": {
+      "A": "Raising temperature globally introduces variation into structured data-capture turns, increasing the risk of schema violations and malformed JSON output. The failure mode is sacrificing data reliability to fix a problem that only exists in the generation phase.",
+      "C": "Detailed stylistic instructions in the system prompt reduce ambiguity but do not inject lexical variation at the sampling level \u2014 at temperature 0.1, Claude will still collapse toward high-probability token sequences regardless of how rich the style guidance is. This conflates prompt clarity with output diversity.",
+      "D": "Model size does not reliably increase output diversity at a fixed low temperature; diversity is a direct function of the sampling temperature parameter, not parameter count. Switching models adds cost and latency while leaving the root cause \u2014 temperature 0.1 throughout \u2014 unchanged."
+    }
+  },
+  {
+    "question_id": "temperature_q008",
+    "correct_letter": "B",
+    "correct_explanation": "Temperature controls output randomness, and the correct fix is to expose it as a per-call parameter so extraction turns stay deterministic (low temperature) while the narrative turn gets enough variance to produce distinct outputs (higher temperature). This is the minimal architectural change \u2014 no restructuring, no new function \u2014 just making an existing argument caller-configurable. The repetitive output is a direct consequence of a fixed low temperature suppressing the lexical diversity needed for individualized narratives.",
+    "distractor_explanations": {
+      "A": "Setting temperature to 0.0 globally eliminates the variance that narrative generation requires, making the boilerplate problem worse, not better. This treats extraction precision as the priority for all turns when the real issue is insufficient diversity on the narrative turn.",
+      "C": "Prompt expansion addresses style intent but not the sampling mechanism causing repetition. When temperature is already suppressing variance, additional style instructions cannot override the model's tendency to collapse onto the same high-probability token sequences.",
+      "D": "Model size affects capability, not output diversity for a given temperature setting. A larger model at the same low temperature produces more capable but equally repetitive outputs, leaving the root cause \u2014 insufficient sampling randomness \u2014 unchanged."
+    }
+  },
+  {
+    "question_id": "temperature_q009",
+    "correct_letter": "B",
+    "correct_explanation": "The settings.json default enforces correct behavior for the common case while CLAUDE.md documents the intentional exception \u2014 this is the standard Claude configuration pattern for balancing enforcement with legitimate override. Hardcoding eliminates a real capability; undocumented defaults create the exact knowledge gap that caused the original drift. Pairing a sensible default with explicit documentation of when and why to deviate is what separates accidental variance from intentional variance.",
+    "distractor_explanations": {
+      "A": "Hardcoding eliminates the legitimate high-temperature use case that senior engineers actively rely on for edge-case tickets \u2014 this trades one problem (accidental drift) for a different one (capability loss). A slash command definition is not the right layer to encode nuanced team policy.",
+      "C": "Relying on CLI help output to communicate policy puts critical behavioral knowledge in a location engineers have no reason to check after initial setup \u2014 this reproduces the same undocumented-assumption failure mode that caused the original variance. Documentation and defaults must be co-located in CLAUDE.md to be effective.",
+      "D": "Post-processing validation catches malformed output but does nothing to prevent the upstream variance in extraction behavior across temperature settings \u2014 this is downstream error handling masquerading as root cause remediation. It also adds pipeline complexity without addressing why different runs produce structurally different outputs in the first place."
+    }
+  },
+  {
+    "question_id": "temperature_q010",
+    "correct_letter": "A",
+    "correct_explanation": "Within the constraint of owning CLAUDE.md and settings.json but not the codebase, setting a default in settings.json establishes a sensible baseline while documenting the recommended range with rationale gives engineers the context to make informed decisions. This approach addresses the root cause \u2014 absence of guidance \u2014 without overreaching into infrastructure the team lead doesn't control. It pairs a behavioral default with explicit policy, which is the correct governance pattern when you can configure but not enforce.",
+    "distractor_explanations": {
+      "B": "Few-shot examples influence output style but don't govern temperature as a parameter \u2014 an engineer still passes 0.8 and the model still runs at higher stochasticity, making policy-compliant anchoring unreliable. This conflates output conditioning with parameter governance.",
+      "C": "Filing a platform request is a legitimate long-term path, but it abandons available governance tools (CLAUDE.md, settings.json) while waiting for infrastructure changes that may not happen quickly. The team lead has actionable authority now; deferring entirely to infrastructure when documentation and defaults are available is an overcorrection.",
+      "D": "Prohibiting overrides entirely in CLAUDE.md exceeds what CLAUDE.md can technically enforce \u2014 engineers can still pass temperature values in code, making the policy unenforceable without codebase access. Ticket-gating all deviations also creates process friction that will be ignored or bypassed rather than respected."
+    }
+  }
+]

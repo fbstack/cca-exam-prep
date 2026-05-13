@@ -1,0 +1,213 @@
+[
+  {
+    "id": "temperature_q001",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Whether to set temperature to 0.0 or 1.0 when building a code generation assistant",
+    "stem": "A team is deploying a Claude-powered assistant that extracts structured customer records from unstructured support tickets and writes the results as JSON. The system prompt already specifies the exact field names and schema in detail. During QA, the team still observes that field names occasionally vary between runs \u2014 'customer_id' sometimes appears as 'customerId' or 'cust_id'. The team suspects a parameter setting is contributing to this inconsistency. Which temperature setting most directly addresses this problem?",
+    "options": {
+      "A": "Set temperature to 0.5 to balance consistency with enough variation to handle edge-case ticket formats",
+      "B": "Set temperature to 0.0 so the model deterministically selects the highest-probability token at each step, producing stable field names across runs",
+      "C": "Set temperature to 1.0 to allow the model to explore a wider range of output formats, then apply post-processing to normalize field names",
+      "D": "Set temperature to 0.0 only for tickets flagged as high-priority, using temperature 0.7 for standard tickets to preserve flexibility in parsing ambiguous inputs"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q002",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to set temperature to 0.0 or 1.0 when building a code generation assistant",
+    "stem": "A customer support platform uses the Anthropic Python SDK \u2014 initialized with `client = Anthropic()` as in the lab \u2014 to generate Python routing scripts that assign incoming tickets to the correct support queue. The team notices that identical ticket descriptions passed to the API on different days occasionally produce scripts with different logic branches, causing some tickets to be silently misrouted. An engineer proposes fixing this by adding retries until two consecutive responses match. What is the more architecturally sound approach?",
+    "options": {
+      "A": "Pass `temperature=0.0` in the `client.messages.create()` call so the model deterministically selects the highest-probability token, producing the same routing logic for the same input every time",
+      "B": "Pass `temperature=0.5` to reduce but not eliminate variation, then use the retry-match strategy as a safety net for the remaining variance",
+      "C": "Increase `max_tokens` to give the model more room to reason through the routing logic before committing to a code branch",
+      "D": "Move the routing logic into the system prompt rather than the user message, which will stabilize output across API calls regardless of temperature"
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to hardcode a fixed temperature value or expose it as a configurable parameter when wrapping the Claude API in a shared internal service",
+    "stem": "A platform team has deployed a centralized Claude API wrapper used by both a structured data extraction pipeline and a customer support resolution agent. Both endpoints share a hardcoded temperature of 0.7. The data extraction team reports intermittent hallucinated field values in JSON output, while the customer support team finds responses appropriately varied and empathetic. What is the most architecturally sound diagnosis and remedy?",
+    "options": {
+      "A": "Rewrite the data extraction prompts to include stricter output constraints, which will compensate for the elevated temperature and reduce hallucinated values.",
+      "B": "Temperature 0.7 is causing the data extraction endpoint to sample from a wider probability distribution than accuracy tasks require; the wrapper should expose temperature as an optional per-task parameter with validated defaults appropriate to each use case.",
+      "C": "Switch both endpoints to a larger Claude model, since larger models produce more accurate outputs regardless of temperature setting.",
+      "D": "Add a post-processing validation layer that rejects malformed extraction results and retries the call until a valid response is returned."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to hardcode a fixed temperature value or expose it as a configurable parameter when wrapping the Claude API in a shared internal service",
+    "stem": "A team has built a shared internal service wrapping the Claude API, modeled on the same client initialization pattern used in the lab. The service is called by both a structured data extraction pipeline and a customer support resolution agent, but the Anthropic client is instantiated once at startup with temperature hardcoded into every messages.create() call. The data extraction team wants to lower temperature for their use case without affecting the support team. Given that the client is shared and stateless across callers, what is the most appropriate architectural change?",
+    "options": {
+      "A": "Instantiate a separate Anthropic client for each product team so each client can carry its own default temperature configuration.",
+      "B": "Accept temperature as an optional call-time parameter in the wrapper's request handler, apply a validated default per task type when omitted, and pass it through to messages.create() \u2014 leaving the shared client instantiation unchanged.",
+      "C": "Store each team's preferred temperature in environment variables and reload them on each request so the shared client picks up the correct value per caller.",
+      "D": "Expose temperature as a required parameter with no default, forcing every caller to supply it explicitly on every request to prevent accidental misconfiguration.",
+      "distractor_types_note": "removed \u2014 see field below"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "clearly wrong",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "temperature_q005",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "How to set temperature for an agentic subagent that must choose between tool calls mid-pipeline when errors are costly and irreversible",
+    "stem": "A customer support platform uses an unattended overnight pipeline to process bulk account closure requests. A subagent parses each request and routes it to one of three irreversible mutation tools: permanent_delete, anonymize, or suspend. The ops team reviews logs the following morning and has no automated rollback capability. The pipeline has been running at temperature 0.5, and post-incident analysis reveals that three accounts were permanently deleted when the intent was ambiguous enough that anonymize was the safer choice. What is the most architecturally sound remediation?",
+    "options": {
+      "A": "Lower temperature to 0.0 so the subagent deterministically selects the highest-confidence tool on every invocation, eliminating non-deterministic routing on ambiguous inputs",
+      "B": "Add a confidence-scoring step before each tool call and route low-confidence inputs to a human review queue rather than adjusting temperature alone",
+      "C": "Lower temperature to 0.2 to reduce variance while preserving some flexibility for the subagent to handle genuine edge cases without human escalation",
+      "D": "Replace temperature-based sampling with a majority-vote ensemble: run the routing decision three times at temperature 0.5 and invoke whichever tool wins two of three draws"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q006",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "How to set temperature for an agentic subagent that must choose between tool calls mid-pipeline when errors are costly and irreversible",
+    "stem": "A team builds a structured data extraction pipeline that uses a Claude subagent to classify each incoming record and dispatch it to one of three database mutation tools. Their SDK initialization follows the same Anthropic client pattern used in the lab, but they instantiate a separate client per pipeline stage and pass a shared temperature value from a central config. During a production incident, the archive tool is called instead of update on roughly 8% of records \u2014 exactly the rate they'd expect from non-deterministic sampling at their configured temperature of 0.6. A senior engineer argues that since the client is re-instantiated per stage, each call is stateless and temperature has no cumulative effect, so the incident must have another root cause. What is the most accurate architectural assessment?",
+    "options": {
+      "A": "The senior engineer is correct: client re-instantiation resets any internal sampling state, so temperature 0.6 cannot produce systematic 8% routing errors across independent calls",
+      "B": "The senior engineer is incorrect: temperature governs per-call token sampling probability regardless of client instantiation pattern; at 0.6, marginally ambiguous inputs will non-deterministically resolve differently across calls, and setting temperature to 0.0 for irreversible tool selection is the correct fix",
+      "C": "The root cause is likely prompt drift introduced by the per-stage client pattern; consolidating to a single shared client instance and keeping temperature at 0.6 will stabilize routing",
+      "D": "Temperature 0.6 is within the acceptable range for tool-routing agents because the subagent's tool descriptions constrain the output space sufficiently to prevent dangerous misrouting at moderate temperatures"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "clearly wrong",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "temperature_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to vary temperature based on the turn position in a multi-turn conversation designed to help users iteratively refine a creative brief",
+    "stem": "A customer support platform uses a multi-turn Claude integration to help enterprise clients draft custom service scripts. Early turns collect structured data \u2014 escalation thresholds, tone preferences, prohibited phrases \u2014 using strict JSON schema enforcement with output validation. Despite schema enforcement, post-launch monitoring reveals that script copy generated in later turns feels formulaic and repetitive across different clients, producing nearly identical phrasing even when clients have submitted very different tone preferences. The team is using a fixed temperature of 0.1 throughout all turns. What is the most architecturally sound fix?",
+    "options": {
+      "A": "Raise the fixed temperature to 0.7 for all turns so that both data collection and script generation benefit from increased variation.",
+      "B": "Keep low temperature (0.1\u20130.2) during requirement-gathering turns and raise temperature (0.8\u20131.0) during script-generation turns, varying the parameter by conversation phase.",
+      "C": "Expand the system prompt with more detailed stylistic instructions for each tone category so Claude has explicit guidance rather than relying on randomness.",
+      "D": "Switch to a larger model, which generates more diverse outputs at the same temperature setting without risking data-capture accuracy."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to vary temperature based on the turn position in a multi-turn conversation designed to help users iteratively refine a creative brief",
+    "stem": "A team is building a structured data extraction pipeline for insurance claim intake using the Anthropic SDK client initialized in the lab. Their chat function accepts a messages list and a single temperature value, which it passes unchanged on every API call. The first two turns collect claim type, policy number, and incident date; the third turn asks Claude to compose a formal claim summary narrative. The team notices the narrative outputs are formulaic and repetitive across claims with similar incident types \u2014 adjusters report that the summaries read as nearly identical boilerplate regardless of the claimant's specific details. A retry loop with output validation is already in place for the extraction turns. Without restructuring the conversation flow or adding a separate function, what is the most direct architectural change to address the narrative quality problem?",
+    "options": {
+      "A": "Reduce temperature to 0.0 for all turns so that Claude consistently applies the same formatting rules to both extraction and narrative turns.",
+      "B": "Parameterize the temperature argument in the chat function so that callers can pass turn-appropriate values \u2014 low for extraction turns and higher for the narrative generation turn.",
+      "C": "Expand the system prompt with more detailed instructions describing the stylistic qualities the narrative should exhibit, such as empathetic tone and claimant-specific language.",
+      "D": "Switch the narrative turn to a larger Claude model variant to increase output diversity without changing the temperature configuration."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q009",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Whether to document the expected temperature range",
+    "stem": "A platform engineering team ships a /extract-customer-data slash command used by 15 engineers to pull structured fields from support tickets. Six weeks after launch, data quality reviews reveal that extracted records have inconsistent field populations \u2014 some runs produce tightly formatted JSON, others return loosely structured prose with missing keys. Root cause analysis shows engineers are running the command with temperatures ranging from 0.1 to 0.8, each believing their setting is the team default. A further complication emerges: the team's senior support engineers regularly handle edge-case tickets \u2014 ambiguous complaints that span multiple categories \u2014 and have found that temperatures around 0.6\u20130.7 help surface nuanced intent that strict extraction misses. The engineering lead must decide how to remediate the variance without stripping these engineers of a capability they actively rely on. What is the most architecturally sound remediation strategy?",
+    "options": {
+      "A": "Hardcode temperature=0.1 directly in the slash command definition so no engineer can override it, eliminating variance at the source and ensuring consistent structured output across all ticket types.",
+      "B": "Add a CLAUDE.md entry documenting the recommended temperature range (0.1\u20130.3) for standard structured extraction and the conditions under which higher temperatures are appropriate, and set a settings.json default of 0.1 so the correct value applies automatically when no override is given \u2014 preserving intentional overrides while eliminating accidental drift.",
+      "C": "Set the default to temperature=0.1 in settings.json without additional documentation, relying on the enforcement mechanism alone to eliminate variance; engineers who need higher temperatures can discover the override mechanism through the CLI help output.",
+      "D": "Increase the specificity of the output format instructions and add a strict JSON schema validation step in post-processing so that extraction quality becomes temperature-insensitive and any malformed output is caught and rejected before entering the data pipeline."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "temperature_q010",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Whether to document the expected temperature range",
+    "stem": "A customer support resolution agent built with Claude Code uses a /draft-resolution slash command that calls the Anthropic SDK client \u2014 initialized identically to the pattern in the lab \u2014 with no temperature parameter set explicitly. Engineers on the support tooling team have begun passing temperature=0.8 when drafting responses for complex escalation cases, reasoning that higher creativity helps with ambiguous situations. The team lead notices that resolution drafts are now inconsistent: some are precise and policy-compliant, others are verbose and introduce unauthorized commitments. After investigation, the team lead learns that engineers are not doing this maliciously \u2014 they simply have no guidance on what temperature values are appropriate for this use case, and the SDK default leaves the decision entirely to the caller. The team lead has authority over CLAUDE.md and settings.json but cannot modify the underlying codebase or restrict SDK parameter access, which is maintained by a separate platform team. Which approach best establishes temperature governance within these constraints?",
+    "options": {
+      "A": "Set temperature=0.3 as the default in settings.json and document the recommended range (0.2\u20130.4) with rationale in the slash command's CLAUDE.md entry, giving engineers explicit guidance on appropriate values and the reasoning behind them.",
+      "B": "Add few-shot examples of compliant resolutions to the system prompt so the model anchors on policy-appropriate outputs regardless of the temperature value engineers supply.",
+      "C": "File a request with the platform team to wrap the SDK client in a service that pins temperature at 0.3, treating the absence of parameter guidance as evidence that configuration governance should be infrastructure-enforced rather than documented.",
+      "D": "Update the CLAUDE.md entry to prohibit temperature overrides entirely and require engineers to open a ticket for any deviation, ensuring all non-default usage is reviewed before going to production."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "plausible misconception",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  }
+]
