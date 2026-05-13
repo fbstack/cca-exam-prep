@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": "system_prompts_exercise_q002",
+    "correct_letter": "B",
+    "correct_explanation": "The system parameter is architecturally designed to hold persistent behavioral constraints that apply across all turns without consuming user message tokens. Moving extraction rules there eliminates redundant token overhead on every call and ensures consistent behavior in multi-turn sessions, since system instructions are not overwritten by subsequent user messages.",
+    "distractor_explanations": {
+      "A": "Abbreviating instructions reduces token count marginally but keeps the architectural flaw intact\u2014rules still consume user message tokens on every call and risk misinterpretation by the model. This is optimization of the wrong layer.",
+      "C": "Few-shot examples alone cannot reliably enforce strict schema constraints the way explicit instructions do, and appending examples to every user message trades one source of token overhead for another without solving the consistency problem.",
+      "D": "Increasing max_tokens controls output length, not input capacity or how instructions are processed. It does nothing to reduce token overhead or prevent inconsistent behavior across multi-turn sessions."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q003",
+    "correct_letter": "A",
+    "correct_explanation": "SDK upgrades frequently tighten type validation, and the Anthropic API distinguishes between an omitted system parameter and an explicitly passed null value. Passing system=None signals an intentional null argument that stricter validation rejects as malformed, whereas simply omitting the parameter tells the SDK to send no system field at all. The fix is to conditionally include the parameter only when a prompt exists, not to pass None as a sentinel.",
+    "distractor_explanations": {
+      "B": "None is a Python object, not a string\u2014the SDK serializes it or rejects it, not converts it to the literal text 'None'. This confuses Python type behavior with JSON serialization logic.",
+      "C": "Output format and parsing behavior are governed by prompts and model instructions, not by ticket category metadata. The failure pattern here is an API-level runtime exception, not a downstream parsing mismatch.",
+      "D": "Anthropic does not inject a default managed system prompt when system is absent or null; the model simply operates without one. This invents a fallback mechanism that doesn't exist in the API."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q004",
+    "correct_letter": "B",
+    "correct_explanation": "The Anthropic SDK distinguishes between a system parameter that is absent and one explicitly set to None \u2014 passing system=None can trigger unexpected validation behavior or be serialized as a null field in the API call. Building kwargs conditionally ensures the parameter is only present when it carries a meaningful value, which is the standard defensive pattern for optional API parameters. This eliminates the latent risk without changing any downstream behavior for the schema-constrained mode.",
+    "distractor_explanations": {
+      "A": "An empty string is still an explicit value passed to the API and does not represent 'no system prompt' \u2014 it sends a system field with an empty string, which the API treats differently from the parameter being absent entirely. This substitutes one malformed default for another.",
+      "C": "Requiring engineers to always supply a system prompt defeats the purpose of supporting a raw passthrough mode and pushes a structural fix into a runtime warning that will be ignored or suppressed. It addresses the symptom rather than the architectural flaw.",
+      "D": "Pinning the SDK version freezes the codebase against security patches and upstream improvements while enshrining a known-risky pattern as convention. Version pinning is not a substitute for correct parameter handling."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q005",
+    "correct_letter": "B",
+    "correct_explanation": "max_tokens is a hard ceiling that cuts output regardless of semantic completeness \u2014 a 150-token cap will always truncate scripts that require more tokens to be syntactically valid. Calibrating max_tokens to the worst-case output length eliminates truncation as a failure mode at the source. This is the correct architectural fix: remove the constraint that causes the failure rather than working around it downstream.",
+    "distractor_explanations": {
+      "A": "Forcing shorter functions degrades the agent's capability \u2014 complex ticket resolutions like refund workflows may genuinely require longer scripts, and artificial brevity will cause logic errors rather than truncation errors. This trades one failure mode for another without fixing the root constraint.",
+      "C": "A retry loop at max_tokens=150 will re-truncate the output identically on every retry, so it never resolves the failure \u2014 it just adds latency and doubles API cost on 30% of calls. Detecting truncation without raising the cap is a band-aid over a structural misconfiguration.",
+      "D": "Model size does not determine whether output fits within a hard token cap \u2014 max_tokens truncates regardless of which model is used. A larger model generating the same script will hit the same 150-token ceiling."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q006",
+    "correct_letter": "B",
+    "correct_explanation": "max_tokens is a hard ceiling on output length set by the caller, not dynamically adjusted by Claude. If the value was calibrated against short, flat-schema outputs, it will truncate longer nested-schema functions before they complete. The fix is to set max_tokens high enough to accommodate the longest expected output in your use case.",
+    "distractor_explanations": {
+      "A": "The system prompt contributes to input tokens, not output tokens, so it cannot cause output truncation. Removing it would not change the max_tokens ceiling that is cutting off the function body.",
+      "C": "Claude does not apply different output length limits based on whether a system prompt is present. max_tokens behaves identically regardless of system prompt inclusion.",
+      "D": "Claude has no internal mechanism that reduces output length based on input semantic complexity or a quality threshold. Output length is governed solely by max_tokens and natural completion boundaries."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q007",
+    "correct_letter": "B",
+    "correct_explanation": "The system prompt establishes the persistent behavioral contract for every request in a session, making it the correct layer to enforce output format constraints. A tightly scoped persona prompt that mandates JSON structure, specific field names, and response shape eliminates format variance at the source rather than compensating for it downstream. This approach adds zero per-request token overhead while guaranteeing consistency across all 40,000 daily requests.",
+    "distractor_explanations": {
+      "A": "This treats the symptom rather than the cause\u2014a normalization layer adds latency, complexity, and a new failure surface without fixing the model's inconsistent output behavior. It also requires maintaining format-detection logic for every new output variant Claude produces.",
+      "C": "Temperature controls sampling randomness, not instruction-following behavior; reducing it does not reliably constrain output format. Supplementing with per-request reminders reintroduces the token overhead the architect explicitly rejected and still leaves consistency dependent on user message phrasing.",
+      "D": "Larger models do not inherently produce structured outputs without explicit format constraints\u2014they generalize more capably but still respond to the behavioral framing they are given. Swapping models without fixing the underspecified system prompt reproduces the same inconsistency at higher cost."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q008",
+    "correct_letter": "B",
+    "correct_explanation": "The system prompt is the authoritative behavioral contract for every session \u2014 rewriting it to constrain the persona to exact fields, ordering, and a no-prose rule eliminates the ambiguity that causes format drift. 'You are a helpful data assistant' leaves output structure entirely to the model's inference, which produces the observed variance. A tightly scoped system prompt enforces consistent behavior at the architectural level, before any user message is processed.",
+    "distractor_explanations": {
+      "A": "Injecting format instructions as the first user message makes consistency dependent on every caller correctly constructing that message \u2014 it relocates the problem rather than solving it. Format authority belongs in the system prompt, not in user-turn scaffolding that can be omitted or malformed.",
+      "C": "Claude has no memory between sessions; a messages list persists only within a single context window and is discarded when the session ends. Attempting to share state across sessions to 'teach' format is a stateless-architecture misconception \u2014 the model cannot learn from prior sessions.",
+      "D": "Chain-of-thought reasoning surfaces the model's derivation process but does not constrain output structure \u2014 it increases verbosity and introduces exactly the kind of explanatory prose the team is trying to eliminate. Format consistency requires explicit specification, not reasoning delegation."
+    }
+  },
+  {
+    "question_id": "system_prompts_exercise_q001",
+    "correct_letter": "A",
+    "correct_explanation": "The system parameter is the API's designated location for persistent behavioral constraints that frame every turn of a conversation, independent of how user messages are constructed. Moving the instructions there eliminates the fragile dependency on upstream services correctly prepending text, because the behavioral contract is enforced at the API call level, not the message-assembly level. This is exactly the architectural separation the system parameter is designed to provide.",
+    "distractor_explanations": {
+      "B": "This keeps the fragility in place by relying on distributed enforcement across multiple upstream services\u2014any service that bypasses or misimplements the middleware still breaks the contract. It trades one coordination problem for another rather than eliminating the dependency.",
+      "C": "The first assistant message is not a persistent instruction layer; it is conversational output the model treats as prior context, not a behavioral directive. Anchoring format expectations to the model's own prior turn is unreliable and not an authoritative configuration mechanism.",
+      "D": "Recency bias is not a reliable architectural principle to build production systems on, and appending to user messages preserves the same upstream-dependency failure mode. This changes message construction order without solving the single-authoritative-location problem."
+    }
+  }
+]

@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-11",
+  "last_updated": "2026-05-12",
   "exam_format": {
     "total_questions": 60,
     "time_minutes": 120,
@@ -35,14 +35,15 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 35,
-      "foundational": 6,
-      "intermediate": 19,
-      "architect": 10,
+      "questions_generated": 43,
+      "foundational": 8,
+      "intermediate": 23,
+      "architect": 12,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
-        "system_prompts"
+        "system_prompts",
+        "system_prompts_exercise"
       ]
     },
     "Tool Design & MCP": {

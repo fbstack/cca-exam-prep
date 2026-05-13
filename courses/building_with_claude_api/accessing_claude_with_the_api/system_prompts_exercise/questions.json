@@ -1,0 +1,170 @@
+[
+  {
+    "id": "system_prompts_exercise_q001",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Whether to place role and behavioral constraints in the system parameter or repeat them in each user message",
+    "stem": "A team is building a customer support agent that handles hundreds of tickets per day. The agent must always respond in a formal tone, categorize the issue type, and provide a numbered resolution steps list. Currently, the developer prepends these instructions to every user message before sending it to the API. A code review flags this pattern as error-prone: if any upstream service forgets to prepend the instructions, a ticket gets an unformatted, casual-tone response. The team wants a single authoritative location for these behavioral constraints that applies to every API call regardless of how user messages are constructed. What is the correct architectural change?",
+    "options": {
+      "A": "Move the tone and format instructions to the system parameter so they are passed once as a persistent behavioral contract that applies to every turn, independent of user message construction.",
+      "B": "Keep the instructions in user messages but enforce prepending via a shared middleware function that all upstream services must call before submitting a ticket.",
+      "C": "Store the instructions in the first assistant message of each conversation so the model can reference its own prior output as a format anchor.",
+      "D": "Append the instructions to the end of each user message instead of the beginning, since recency bias means the model weights later context more heavily."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q002",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to place role and behavioral constraints in the system parameter or repeat them in each user message",
+    "stem": "A team is building a structured data extraction pipeline that calls the API hundreds of times per day. Each call must extract fields into a strict JSON schema. Their current implementation passes extraction rules and schema instructions at the start of every user message, following the same pattern used in their early prototypes. A senior engineer flags that this approach is adding significant token overhead and may cause inconsistent behavior in multi-turn sessions. What architectural change should the team make?",
+    "options": {
+      "A": "Compress the extraction rules using abbreviations in each user message to reduce token overhead while keeping them visible to the model per call.",
+      "B": "Move the extraction rules and schema instructions into the system parameter so they are applied once as a persistent constraint without consuming user message tokens.",
+      "C": "Remove the instructions entirely and rely on few-shot examples appended to each user message to demonstrate the expected JSON output format.",
+      "D": "Increase the max_tokens limit per call so the model has more capacity to process the combined instructions and input content in each user message."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to pass system=None explicitly or omit the system parameter entirely when no system prompt is needed",
+    "stem": "A customer support resolution platform uses a reusable chat() wrapper that conditionally applies a system prompt based on ticket category. For general inquiries, no system prompt is configured, and the wrapper currently passes system=None to the API. After upgrading the Anthropic SDK, the team begins seeing runtime exceptions exclusively on general inquiry tickets, while specialized category tickets continue working. What is the most likely architectural cause?",
+    "options": {
+      "A": "The upgraded SDK enforces stricter type validation and rejects system=None because the API distinguishes between an absent parameter and an explicit null value, treating None as a malformed request rather than 'no system prompt'.",
+      "B": "The SDK upgrade changed how system prompt content is tokenized, causing None to be interpreted as the literal string 'None' and injected into the conversation context.",
+      "C": "General inquiry tickets lack the role persona definition that specialized tickets have, so the model defaults to a stricter output format that triggers downstream parsing errors.",
+      "D": "Passing system=None causes the API to fall back to a default Anthropic-managed system prompt that conflicts with the application's expected response structure."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to pass system=None explicitly or omit the system parameter entirely when no system prompt is needed",
+    "stem": "A structured data extraction pipeline uses a chat() wrapper modeled on the pattern from the lab exercise \u2014 accepting an optional system keyword argument and forwarding it directly to client.messages.create(). In production, the pipeline runs two modes: schema-constrained extraction (with a system prompt) and raw passthrough (without one). A code review reveals the wrapper always calls client.messages.create(model=..., messages=..., system=system), where system defaults to None for the raw passthrough mode. A senior engineer flags this as a latent reliability risk. What is the most architecturally sound fix?",
+    "options": {
+      "A": "Replace system=None with system='' in the default to signal an intentionally empty system prompt, since empty strings are more explicitly handled by SDK validation logic than null values.",
+      "B": "Refactor the wrapper to build the keyword arguments dict conditionally \u2014 including the system key only when a non-None value is provided \u2014 so the parameter is absent from the API call when no system prompt is configured.",
+      "C": "Add a pre-call validation step that raises a warning when system is None, prompting engineers to always supply an explicit system prompt to avoid ambiguous API behavior.",
+      "D": "Pin the SDK to the version used in development to prevent validation behavior changes from affecting production, and document the system=None pattern as an accepted convention."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q005",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "How to set max_tokens when building a production coding assistant that must return complete function implementations",
+    "stem": "A customer support resolution agent uses Claude to generate structured Python scripts that auto-resolve common ticket types \u2014 closing accounts, resetting passwords, issuing refunds. The team sets max_tokens=150 to keep API costs low. In production, roughly 30% of generated scripts fail to execute because they are truncated mid-function, causing uncaught exceptions in the resolution pipeline. The team debates whether to tune max_tokens or restructure the prompts. What is the most architecturally sound next step?",
+    "options": {
+      "A": "Restructure the system prompt to instruct Claude to write shorter functions, so outputs stay within the current 150-token cap.",
+      "B": "Set max_tokens to a value calibrated to the longest expected script output \u2014 such as 1024 or higher \u2014 so the hard cap never truncates a valid function mid-execution.",
+      "C": "Add a post-processing step that detects truncated outputs and retries the call, keeping max_tokens at 150 to preserve cost savings.",
+      "D": "Switch to a larger model, which produces more efficient code and is less likely to exceed the 150-token limit for the same task."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q006",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "How to set max_tokens when building a production coding assistant that must return complete function implementations",
+    "stem": "A team is building a structured data extraction service that uses a system prompt \u2014 modeled on the pattern from the lab exercise \u2014 to constrain Claude to the role of a Python data engineer. The service calls client.messages.create() to generate extraction functions from natural language schema descriptions. During load testing, the team notices that functions extracting from deeply nested JSON schemas are frequently truncated, while simple flat-schema functions complete correctly. The system prompt and user messages are identical in both cases. What is the most likely architectural cause?",
+    "options": {
+      "A": "The system prompt persona definition is consuming tokens that would otherwise be available for the function body, so removing the system prompt would resolve the truncation.",
+      "B": "The max_tokens value was set based on the output length of simple flat-schema functions and is too low to accommodate the longer outputs required by nested-schema extractions.",
+      "C": "Claude applies stricter output length limits when a system prompt is present, so the same max_tokens value produces shorter completions than it would without a system prompt.",
+      "D": "Nested JSON schema descriptions are semantically more complex, causing Claude to reduce output length to stay within its own internal quality threshold."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Whether to use a tightly scoped persona system prompt or a broad general-purpose system prompt when deploying a specialist coding assistant",
+    "stem": "A customer support platform processes roughly 40,000 structured data extraction requests per day, each asking Claude to pull specific fields (order ID, issue category, resolution status) from free-text support tickets. The team initially deployed Claude with a broad system prompt: 'You are a helpful assistant that can answer any question.' After two weeks, downstream parsing pipelines are failing at a 22% rate because Claude sometimes returns prose summaries, sometimes raw JSON, and sometimes bulleted lists depending on phrasing in the ticket. The engineering lead proposes fixing this by adding format instructions to every user message. A senior architect pushes back, arguing this adds per-request token overhead and still doesn't guarantee consistency across sessions. What is the most architecturally sound resolution?",
+    "options": {
+      "A": "Implement a post-processing normalization layer that detects output format and converts all responses to JSON before downstream systems consume them",
+      "B": "Replace the broad system prompt with a tightly scoped persona prompt that explicitly constrains output format, field names, and response structure for the extraction task",
+      "C": "Lower the model temperature to reduce output variance and supplement with per-request format reminders in the user message",
+      "D": "Switch to a larger model, since higher-capacity models produce more consistent structured outputs without requiring explicit format constraints"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "system_prompts_exercise_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Whether to use a tightly scoped persona system prompt or a broad general-purpose system prompt when deploying a specialist coding assistant",
+    "stem": "A team is building a structured data extraction service that calls Claude via the Anthropic SDK using the same chat() pattern from their internal lab framework \u2014 initializing a messages list, appending user messages with add_user_message(), and passing a system keyword argument to chat(). In production, they observe that identical extraction prompts sent in different sessions return inconsistently formatted results: some responses include field labels and units, others omit them, and others prepend a conversational explanation before the data. The system argument is currently set to 'You are a helpful data assistant.' The team debates whether the root cause is stateless session behavior, an undertrained model, or insufficient system prompt specificity. What architectural change will most reliably eliminate output format variance across sessions at scale?",
+    "options": {
+      "A": "Preserve the current system prompt and enforce consistency by injecting explicit format instructions as the first user message in every new session",
+      "B": "Rewrite the system argument to define a tightly scoped extraction persona \u2014 specifying exact output fields, ordering, format, and the constraint that no explanatory prose precedes the structured output",
+      "C": "Persist a shared messages list across sessions so the model can learn the correct format from prior successful extractions in its context window",
+      "D": "Enable chain-of-thought reasoning in the system prompt so the model derives the correct format from the extraction task structure rather than requiring explicit format specification"
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  }
+]

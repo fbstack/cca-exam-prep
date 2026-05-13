@@ -1,0 +1,58 @@
+[
+  {
+    "decision": "Whether to place role and behavioral constraints in the system parameter or repeat them in each user message",
+    "context": "A team is building a Python code review assistant that must always respond with concise, structured feedback. The assistant will be used across hundreds of API calls per day. The team is debating where to put the persona and style instructions.",
+    "options": [
+      "Embed role and style instructions at the start of every user message",
+      "Pass role and style instructions once via the system parameter",
+      "Split role instructions into the system parameter and repeat style reminders in each user message"
+    ],
+    "correct": "Pass role and style instructions once via the system parameter. The system parameter is the persistent behavioral contract applied to every turn without consuming user message tokens or requiring repetition.",
+    "constraint": "The application requires consistent behavior across all turns in every session, and instructions must not drift as conversations grow longer.",
+    "failure_mode": "If instructions are embedded in user messages, later turns in long conversations may lose the behavioral constraints as the model weighs recent context more heavily, causing inconsistent tone, verbosity, or format in responses.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Whether to pass system=None explicitly or omit the system parameter entirely when no system prompt is needed",
+    "context": "A developer is writing a reusable chat() wrapper function that conditionally applies a system prompt based on application configuration. In some deployments no system prompt is required, and the developer must decide how to handle the absent case in the API call.",
+    "options": [
+      "Always include system=None in the API call when no system prompt is configured",
+      "Omit the system parameter entirely from the API call when no system prompt is needed",
+      "Pass system='' (empty string) to signal no system instructions"
+    ],
+    "correct": "Omit the system parameter entirely. The API treats a missing system parameter as no system prompt; passing system=None or system='' can cause unexpected behavior or validation errors depending on SDK version.",
+    "constraint": "The SDK and API distinguish between an absent parameter and a null or empty value; only absence cleanly signals 'no system prompt'.",
+    "failure_mode": "Passing system=None may trigger SDK type validation errors or result in a malformed request in strict SDK versions, causing runtime exceptions that break the application when no system prompt is intended.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "How to set max_tokens when building a production coding assistant that must return complete function implementations",
+    "context": "A production coding assistant is being deployed to generate Python utility functions on demand. The team is configuring max_tokens for the API call and must balance cost, latency, and the risk of truncated code outputs.",
+    "options": [
+      "Set max_tokens=50 to minimize cost and latency",
+      "Omit max_tokens entirely and rely on the model's default behavior",
+      "Set max_tokens to a value large enough to accommodate the longest expected function output, such as 1024 or higher"
+    ],
+    "correct": "Set max_tokens to a value large enough for the longest expected output (e.g., 1024+). The API requires max_tokens and uses it as a hard cap; setting it too low truncates code mid-function, and omitting it is not allowed by the API.",
+    "constraint": "max_tokens is a required parameter; the value must be calibrated to the expected output length of the task, not minimized arbitrarily.",
+    "failure_mode": "Setting max_tokens too low causes Claude to return syntactically incomplete Python functions\u2014truncated mid-loop or mid-docstring\u2014which crash at runtime when parsed or executed by downstream systems.",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to use a tightly scoped persona system prompt or a broad general-purpose system prompt when deploying a specialist coding assistant",
+    "context": "An engineering platform team is deploying a Claude-based assistant for internal developer tooling. They must decide between a narrow system prompt (e.g., 'You are a Python engineer who writes concise code') and a broad one (e.g., 'You are a helpful assistant that can answer any question') to serve a high-volume code generation use case.",
+    "options": [
+      "Use a broad, general-purpose system prompt to maximize flexibility across question types",
+      "Use a tightly scoped persona prompt that explicitly constrains role, style, and output format to the coding domain",
+      "Use no system prompt and rely on user messages to provide context per request"
+    ],
+    "correct": "Use a tightly scoped persona prompt. It simultaneously constrains tone, output format, and domain focus in a single persistent instruction, producing predictable outputs at scale without per-request instruction overhead.",
+    "constraint": "High-volume specialist applications require output consistency across thousands of calls; broad prompts introduce variance in verbosity, format, and domain relevance that compounds at scale.",
+    "failure_mode": "A broad or absent system prompt causes the assistant to produce inconsistent outputs\u2014sometimes verbose prose explanations, sometimes code without docstrings, sometimes off-topic answers\u2014making downstream parsing, quality checks, and user experience unreliable across sessions.",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect"
+  }
+]
