@@ -1,0 +1,32 @@
+[
+  {
+    "question_id": "response_streaming_q003",
+    "correct_letter": "B",
+    "correct_explanation": "After the streaming context manager exits, `get_final_message()` returns the fully assembled `Message` object that the SDK constructs internally during streaming\u2014this is the canonical source for both complete content and SDK-calculated `input_tokens`/`output_tokens` counts. Using this single object for both compliance logging and cost attribution avoids redundant work and ensures token counts are authoritative rather than estimated. It is the architecturally sound single-pass solution when downstream systems need structured data beyond raw display.",
+    "distractor_explanations": {
+      "A": "Deriving token counts from string length via a third-party tokenizer introduces measurement error because tokenization is model-specific and the SDK already computes exact counts internally\u2014this duplicates work unreliably and discards the structured `Message` object the SDK builds for free.",
+      "C": "Issuing a second API call to get a clean message object doubles latency and cost while generating a semantically different response\u2014the second call is a new generation, not a retrieval of the first, so its content and token counts will not match the streamed exchange.",
+      "D": "Manually parsing `MessageDelta` events and splicing them with an accumulated string to construct a synthetic record is fragile custom logic that replicates what `get_final_message()` already does correctly\u2014it introduces maintenance burden and risks field misalignment if the event schema changes."
+    }
+  },
+  {
+    "question_id": "response_streaming_q005",
+    "correct_letter": "B",
+    "correct_explanation": "When compliance requires whole-document guarantees\u2014PII redaction across arbitrary token boundaries and unconditional disclaimer appending\u2014the only architecturally sound approach is full server-side buffering before client delivery. Streaming is a UX optimization, not an architectural requirement; the compliance constraint explicitly overrides it. Accumulating the complete response eliminates boundary-spanning leakage by definition and ensures the disclaimer is always present before any content reaches the client.",
+    "distractor_explanations": {
+      "A": "Larger chunk buffers reduce boundary-spanning probability but cannot eliminate it\u2014a 9-digit SSN can still straddle any fixed boundary regardless of size. This is probabilistic mitigation, not architectural remediation, and fails compliance requirements that demand certainty.",
+      "C": "A sliding-window overlap catches many boundary cases but introduces its own failure modes: the overlap window size is arbitrary, multi-pattern spans can exceed it, and already-forwarded chunks containing partial PII have already reached the client before re-scanning occurs. It is a near-miss that shifts rather than eliminates the race condition.",
+      "D": "Using a secondary Claude call per chunk adds latency and cost while inheriting the same boundary-spanning problem\u2014Claude sees the same truncated chunk the regex saw and cannot detect a pattern split across calls. LLM inference is also non-deterministic and inappropriate as a compliance enforcement layer."
+    }
+  },
+  {
+    "question_id": "response_streaming_q006",
+    "correct_letter": "B",
+    "correct_explanation": "ContentBlockDelta events contain arbitrarily sized text fragments, so a multi-character pattern like an email address can be split across two or more consecutive deltas\u2014the regex sees incomplete tokens and produces false negatives. The only reliable remediation is server-side buffering: accumulate all deltas into a complete string, run redaction and disclaimer injection on the whole document, then forward the sanitized result. This trades live-streaming UX for correctness and policy compliance.",
+    "distractor_explanations": {
+      "A": "Running the per-delta regex asynchronously doesn't eliminate the split-token problem\u2014it just moves unreliable regex execution off the main thread. The root failure is operating on incomplete fragments, not thread-level latency.",
+      "C": "Sending unredacted PII to the client and relying on client-side JavaScript to remove it violates the institutional policy at the transport layer; the raw email addresses have already left the server and been exposed in transit and browser memory.",
+      "D": "Switching to a synchronous messages.create() call does solve the buffering problem, but it discards streaming capability entirely when it isn't necessary\u2014server-side accumulation of the streamed deltas achieves the same complete-document guarantee without abandoning the streaming API."
+    }
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "decision": "Whether to use raw event streaming (stream=True with manual event parsing) or the SDK's simplified text_stream interface when building a chat UI",
+    "context": "A team is building a customer-facing chat interface where responses must appear word-by-word. A junior engineer suggests parsing raw MessageStart, ContentBlockDelta, and MessageStop events manually so they can log every event type for debugging. A senior engineer proposes using client.messages.stream() with text_stream instead.",
+    "options": [
+      "Use stream=True and manually iterate over all event types, filtering for ContentBlockDelta to extract text",
+      "Use client.messages.stream() with the text_stream iterator, which automatically extracts only text chunks",
+      "Use standard non-streaming messages.create() and display the full response once complete"
+    ],
+    "correct": "Option B (text_stream) is best for chat UI display. The SDK's simplified interface automatically filters to text content, eliminating boilerplate event-type branching and reducing the surface area for bugs where a developer accidentally renders tool-use or metadata events as visible text.",
+    "constraint": "When the production requirement is purely rendering text to users in real time and there is no need to act on non-text event types during the stream",
+    "failure_mode": "Manual event parsing that fails to filter non-text event types can cause raw JSON metadata (ContentBlockStart, MessageDelta payloads) to appear in the user-facing UI, breaking the chat experience",
+    "domain": "Context Management",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Whether to discard the streamed chunks after display or capture the assembled final message object for storage and downstream processing",
+    "context": "A production chat application streams Claude's response to the browser as it arrives. After the stream ends, the application must persist the full conversation turn to a database and pass the complete response text to a downstream sentiment-analysis service. The engineer wonders whether to reconstruct the message by concatenating all streamed chunks in-memory or to use the SDK's get_final_message() method after streaming.",
+    "options": [
+      "Concatenate each text chunk in a local string variable during streaming and use that as the stored response",
+      "After the streaming context manager exits, call stream.get_final_message() to obtain the fully assembled message object including usage metadata",
+      "Make a second non-streaming API call after streaming finishes to retrieve a clean copy of the response"
+    ],
+    "correct": "Option B is correct. get_final_message() returns the complete assembled Message object with accurate token usage counts and all content blocks, which is required for cost attribution and reliable storage without a second billable API call.",
+    "constraint": "When the application must both stream for UX and store the complete response with accurate usage metadata for cost tracking or audit purposes",
+    "failure_mode": "Manually concatenated chunks lack token usage data (input_tokens, output_tokens), causing cost-reporting dashboards to show zero or incorrect usage; a second redundant API call doubles cost and latency for every turn",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to stream Claude's response directly to the end-user client or buffer the complete response server-side before forwarding, when the server must validate or redact content before display",
+    "context": "A legal-services platform uses Claude to draft preliminary contract clauses. Compliance policy requires that every response pass through a PII redaction filter and a legal-disclaimer injection step before reaching end users. The engineering team is debating whether to use streaming end-to-end (server \u2192 Claude \u2192 client) or to stream from Claude to the server, buffer the full text, post-process it, and then send the final version to the client.",
+    "options": [
+      "Stream chunks directly from Claude through the server to the client in real time, applying regex redaction on each chunk before forwarding",
+      "Stream from Claude to the server, buffer all chunks into a complete response, apply full-document redaction and disclaimer injection, then send the final text to the client in one payload",
+      "Disable streaming entirely and use standard messages.create() to simplify the post-processing pipeline"
+    ],
+    "correct": "Option B is correct. Chunk-level regex redaction (Option A) is unreliable because PII such as a full name or account number can span a chunk boundary, causing partial tokens to slip through undetected. Option C sacrifices all perceived-latency benefit. Option B preserves server-side streaming efficiency while guaranteeing that compliance filters operate on complete, coherent text.",
+    "constraint": "When compliance or safety rules require whole-document context to correctly identify and transform content before it reaches the user, making partial-chunk processing semantically unsafe",
+    "failure_mode": "Chunk-boundary PII leakage: a name split across two chunks ('Jo' + 'hn Smith') causes the redaction regex to miss the pattern in both chunks, exposing regulated data to the end user and creating a compliance violation",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Whether to set max_tokens conservatively (e.g., 256) or generously (e.g., 4096) when enabling streaming for a chat application where response length is unpredictable",
+    "context": "A developer is enabling streaming for a general-purpose assistant that handles both quick factual questions and requests for long-form explanations. They are setting max_tokens for the streaming call and want to balance responsiveness, cost, and completeness.",
+    "options": [
+      "Set max_tokens=256 to keep responses short and fast for all query types",
+      "Set max_tokens=4096 (or the model's practical limit) to ensure long responses are never truncated mid-stream",
+      "Omit max_tokens entirely and rely on the model's default behavior"
+    ],
+    "correct": "Option B is correct for a general-purpose assistant. Streaming masks latency for the user, so the cost of generating a long response is perceptually low. A low max_tokens causes the stream to cut off mid-sentence for complex queries, which is more disruptive when users are watching text appear in real time. Omitting max_tokens (Option C) risks unbounded generation and unpredictable costs.",
+    "constraint": "When streaming is active and query length is unpredictable, truncation mid-stream is more damaging to UX than truncation in a buffered response because users watch the sentence stop abruptly",
+    "failure_mode": "With max_tokens=256 on a streaming chat, users see Claude's explanation cut off mid-sentence in real time\u2014a highly visible failure that erodes trust\u2014while complex queries silently return incomplete answers that users may act on as if complete",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  }
+]

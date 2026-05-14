@@ -1,0 +1,65 @@
+[
+  {
+    "id": "response_streaming_q003",
+    "domain": "Agentic Architecture",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to discard the streamed chunks after display or capture the assembled final message object for storage and downstream processing",
+    "stem": "A customer support resolution agent streams Claude's responses to agents in real time so they can read replies as they form. After each turn, the system must log the complete exchange to a compliance database and report token usage to a cost-attribution dashboard. The engineering team is debating whether to accumulate text chunks into a local string during streaming or to call get_final_message() after the stream closes. What is the most architecturally sound approach given these requirements?",
+    "options": {
+      "A": "Accumulate each ContentBlockDelta chunk into a string variable during streaming, then write that string to the database and derive token counts from the string length using a tokenizer library.",
+      "B": "After the streaming context manager exits, call get_final_message() to retrieve the fully assembled Message object, which includes accurate input_tokens and output_tokens counts alongside the complete content, then use that object for both database persistence and cost attribution.",
+      "C": "Use the accumulated string for database persistence and UX, then issue a second non-streaming API call immediately after to obtain a clean message object with verified token usage for the cost dashboard.",
+      "D": "Parse the MessageDelta event at the end of the stream to extract token counts, and combine that with the accumulated string to construct a synthetic message record for storage."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "clearly-wrong",
+      "D": "plausible misconception"
+    }
+  },
+  {
+    "id": "response_streaming_q005",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Whether to stream Claude's response directly to the end-user client or buffer the complete response server-side before forwarding, when the server must validate or redact content before display",
+    "stem": "A customer support resolution agent at a financial institution uses Claude to generate responses to account holders. Compliance policy mandates that all outbound responses be scanned for SSNs, account numbers, and birthdates before reaching the customer, and that a regulatory disclaimer be appended to every message. The engineering team has implemented chunk-level regex scanning so that each ContentBlockDelta event is filtered and forwarded immediately to the client, achieving sub-200ms time-to-first-token. After a compliance audit, the team discovers that several SSNs were partially transmitted \u2014 the first five digits in one chunk, the last four in the next \u2014 bypassing the regex filter in both chunks. What is the most architecturally sound remediation strategy?",
+    "options": {
+      "A": "Increase the minimum chunk buffer size to 512 tokens before forwarding, so that PII patterns are unlikely to span a chunk boundary in practice.",
+      "B": "Stream Claude's output to the server, accumulate all ContentBlockDelta events into a complete response buffer, apply full-document PII redaction and disclaimer injection, then deliver the final payload to the client as a single response.",
+      "C": "Add a sliding-window overlap mechanism that re-scans the final 50 characters of each forwarded chunk at the start of the next chunk to catch boundary-spanning patterns.",
+      "D": "Replace the regex scanner with a secondary Claude call that reviews each chunk for PII before forwarding, reducing boundary leakage risk."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "response_streaming_q006",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Whether to stream Claude's response directly to the end-user client or buffer the complete response server-side before forwarding, when the server must validate or redact content before display",
+    "stem": "A multi-agent research system uses a streaming pipeline modeled after the lab's pattern of iterating over ContentBlockDelta events to forward text chunks in real time to a React front-end. The system must now comply with a new institutional policy: every synthesis report containing cited sources must have all author email addresses redacted and a data-provenance disclaimer injected before the document header. The team lead argues that the existing chunk-forwarding loop can be extended with an email regex applied per delta, preserving the live-streaming UX. A senior architect objects. Which response most accurately captures the architectural flaw the senior architect is identifying and provides the correct remediation?",
+    "options": {
+      "A": "The per-delta regex adds latency on each event loop iteration; the fix is to run redaction asynchronously in a separate thread while streaming continues uninterrupted to the client.",
+      "B": "Email addresses and multi-part tokens can be split across ContentBlockDelta boundaries, causing the regex to match neither fragment; the correct architecture is to accumulate all deltas into a complete document server-side, apply redaction and disclaimer injection to the full text, and then transmit the processed result to the client.",
+      "C": "The React client should perform redaction locally using the same regex after receiving each chunk, so the server pipeline is not burdened and streaming latency is preserved end-to-end.",
+      "D": "Streaming should be disabled entirely and replaced with a standard synchronous messages.create() call so the post-processing pipeline operates on a fully formed response object from the start."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  }
+]
