@@ -1,0 +1,72 @@
+[
+  {
+    "decision": "Whether to use assistant message prefilling combined with stop sequences, or rely solely on system prompt instructions, to extract clean structured data from Claude responses",
+    "context": "A web application generates AWS EventBridge rules from plain-English descriptions. The API response must be raw JSON that users can copy directly into the AWS console. Default Claude responses wrap JSON in markdown code fences with explanatory prose.",
+    "options": [
+      "Instruct Claude via system prompt to 'return only raw JSON with no additional text or formatting'",
+      "Prefill the assistant message with the opening code fence marker and set the closing fence as a stop sequence",
+      "Post-process every response with a regex that extracts content between code fences"
+    ],
+    "correct": "Option B: Prefilling the assistant turn with '```json' and setting '```' as the stop sequence structurally prevents any prose from appearing \u2014 Claude continues from where it 'thinks' it left off, and generation halts the moment it would close the block. This is deterministic unlike instruction-only approaches.",
+    "constraint": "The application consumes the raw API response string directly without a post-processing layer, so any extraneous characters cause downstream JSON parse failures.",
+    "failure_mode": "With Option A alone, Claude occasionally still adds a preamble or closing comment ('Here is your rule:'), breaking json.loads() and surfacing a 500 error to the end user. With Option C, the regex fails silently when Claude omits code fences entirely, returning an empty string or the full unprocessed response.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Whether to apply the prefill-plus-stop-sequence technique universally to all structured output types or to tailor the prefill token to the specific format being requested",
+    "context": "A backend service uses a single Claude integration to generate multiple artifact types depending on the endpoint called: JSON config objects, Python code snippets, and CSV exports. The team wants to reuse one helper function across all three rather than maintain separate prompt builders.",
+    "options": [
+      "Use a generic prefill of '```' for all output types and strip the language hint in post-processing",
+      "Parameterize the prefill and stop sequence per output type (e.g., '```json' / '```python' / no fence for CSV), passing them as arguments to the shared helper",
+      "Skip prefilling entirely and instead use a large system prompt that enumerates formatting rules for every output type"
+    ],
+    "correct": "Option B: The prefill token should match the exact delimiter Claude would naturally use for that format. Using '```json' signals to Claude that it is inside a JSON context, which steers token probabilities toward valid JSON syntax. A generic '```' loses this steering effect, and a system-prompt-only approach is less reliable across varied output types.",
+    "constraint": "The application must parse each artifact type with its own parser (json.loads, ast.parse, csv.reader) immediately after generation, with no human review step.",
+    "failure_mode": "With Option A, Claude sometimes interpolates language-specific keywords ('python', 'csv') into the output before the content, corrupting the first line of the artifact. With Option C, inconsistent adherence to format rules causes intermittent parse errors that are hard to reproduce and diagnose.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "How to balance assistant message prefilling for output control against multi-turn conversation history integrity when the same session accumulates many structured-generation turns",
+    "context": "An IDE plugin sends a series of code-generation requests within a single conversation session, each using prefilled assistant messages to get clean code blocks. After 15-20 turns the conversation history is sent in full on every request. The team notices that the prefilled '```python' messages in the history are being interpreted by Claude as partial code blocks in subsequent turns, corrupting output.",
+    "options": [
+      "Clear the full conversation history after every structured-generation turn and restart stateless",
+      "Store only the final cleaned output text in the assistant turn (not the prefill marker), so history reflects complete, well-formed exchanges",
+      "Increase max_tokens and add a system prompt instruction to ignore markdown in history"
+    ],
+    "correct": "Option B: After receiving the API response, the application should reconstruct the assistant message in history as the complete artifact ('```python\\n<code>\\n```') rather than leaving the raw prefill fragment. This preserves conversational coherence and prevents Claude from treating open code fences in history as active formatting context.",
+    "constraint": "The plugin must maintain coherent multi-turn context so Claude can reference prior generated functions during refactoring requests later in the same session.",
+    "failure_mode": "With Option A, Claude loses all prior context and cannot reference previously generated functions, breaking the refactoring workflow. With Option C, the instruction is frequently overridden by in-context formatting artifacts, and token costs grow without bound as raw prefill fragments accumulate in history.",
+    "domain": "Context Management",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Whether to set a low max_tokens cap when using stop sequences for structured data extraction, or leave max_tokens at the model default",
+    "context": "A cost-sensitive SaaS product generates short JSON snippets (typically under 200 tokens) using the prefill-plus-stop-sequence technique. The engineering team is deciding how to configure max_tokens for these calls to balance cost control against the risk of truncating valid output.",
+    "options": [
+      "Leave max_tokens at the model default (e.g., 4096) and rely on the stop sequence to end generation early",
+      "Set max_tokens to a value slightly above the expected maximum output size (e.g., 300 tokens for outputs expected under 200)",
+      "Set max_tokens to exactly the expected output size with no buffer"
+    ],
+    "correct": "Option B: Setting max_tokens to a value modestly above the expected ceiling provides a cost safety net while ensuring valid outputs are never truncated. The stop sequence handles normal termination; max_tokens acts as a hard backstop against runaway generation if the stop sequence is somehow missed.",
+    "constraint": "The pricing model bills per output token, and a bug that disables stop sequences would generate thousands of unnecessary tokens per request if max_tokens is left at the model default.",
+    "failure_mode": "With Option A, a stop sequence misconfiguration (e.g., a code deploy that accidentally URL-encodes the backticks) causes Claude to generate full prose completions up to 4096 tokens per call, multiplying costs by 20x before the issue is detected. With Option C, outputs that are occasionally one token longer than expected are silently truncated mid-JSON, causing parse failures in production.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Whether to expose raw Claude API response strings directly to a downstream microservice or to add a validation-and-retry layer between the Claude call and the consumer",
+    "context": "A data pipeline uses Claude to generate JSON transformation rules that are immediately deserialized and applied to streaming records. The pipeline processes 10,000 records per minute. Occasionally Claude returns structurally valid JSON with semantically wrong field names that pass json.loads() but fail schema validation downstream, halting the pipeline.",
+    "options": [
+      "Pass the Claude response directly to the consumer and handle failures at the pipeline level with a dead-letter queue",
+      "Add a JSON Schema validation step after parsing; on failure, retry the Claude call with the validation error appended to the prompt as a correction hint",
+      "Switch to a larger Claude model that produces fewer schema errors and accept the higher per-call cost"
+    ],
+    "correct": "Option B: Inserting schema validation with a targeted retry loop catches the class of errors that pass syntactic parsing but violate semantic constraints. Appending the specific validation error to the retry prompt gives Claude precise corrective signal, typically resolving the issue in one retry. This keeps the pipeline consumer unaware of AI non-determinism.",
+    "constraint": "The pipeline SLA requires fewer than 0.1% failed records per hour, and reprocessing from a dead-letter queue introduces a 15-minute delay that violates downstream SLA commitments.",
+    "failure_mode": "With Option A, semantically invalid rules accumulate in the dead-letter queue faster than the reprocessing worker can drain them during peak load, eventually stalling the entire pipeline. With Option C, model cost increases 5x but semantic errors still occur at a lower rate \u2014 the root cause (no validation feedback loop) is unaddressed, so errors simply become rarer rather than self-correcting.",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect"
+  }
+]

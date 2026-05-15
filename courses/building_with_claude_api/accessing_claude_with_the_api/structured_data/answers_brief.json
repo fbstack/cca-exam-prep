@@ -1,0 +1,92 @@
+[
+  {
+    "question_id": "structured_data_q002",
+    "correct_letter": "B",
+    "correct_explanation": "Assistant turn prefilling works by injecting the seeded text directly into the conversation context as if Claude already wrote it \u2014 the API returns only the newly generated tokens, so the prefilled '```json' never appears in the response content. Generation then halts the moment Claude would emit the closing '```' because it matches the stop sequence, which is also excluded from the returned string. The result is a clean JSON payload with no fences required.",
+    "distractor_explanations": {
+      "A": "The stop sequence only halts generation at the closing fence and excludes that token from output; it has no retroactive effect on the opening fence, which was never generated at all because it was prefilled.",
+      "C": "Claude has no automatic fence-stripping behavior based on inferred caller intent; the clean output is entirely a product of the explicit prefill and stop sequence mechanics, not format detection.",
+      "D": "The Anthropic SDK returns content exactly as the API delivers it \u2014 there is no post-processing layer that strips markdown fences from message content strings."
+    }
+  },
+  {
+    "question_id": "structured_data_q003",
+    "correct_letter": "B",
+    "correct_explanation": "Prefill tokens work by setting the literal start of Claude's response, which directly constrains next-token probabilities toward content consistent with that opening context. A '```json' prefill makes 'python' or 'csv' as the next token nearly impossible because the language identifier is already locked in. Parameterizing the prefill per artifact type eliminates the ambiguity at the generation level rather than patching it downstream.",
+    "distractor_explanations": {
+      "A": "This treats a generation-time steering problem as a parsing-time cleanup problem, adding fragile post-processing instead of fixing the root cause. The generic prefill still leaves Claude free to emit unexpected language identifiers, so the failure mode persists and the parser dependency grows more complex.",
+      "C": "Temperature controls sampling randomness across the entire distribution but does not prevent Claude from choosing a contextually plausible token like 'python' after a bare '```' prefill. The issue is ambiguous context, not high-variance sampling.",
+      "D": "Removing the prefill mechanism discards the most direct tool for steering first-token output, and system prompt instructions alone provide weaker guarantees than a locked prefill because they compete with other context during generation. This trades a precise architectural lever for a softer probabilistic nudge."
+    }
+  },
+  {
+    "question_id": "structured_data_q005",
+    "correct_letter": "B",
+    "correct_explanation": "Storing the raw '```python' fragment leaves an unclosed code fence in the conversation history, and Claude treats accumulated formatting context as active across turns. As more unclosed fences pile up across 15\u201320 turns, Claude interprets subsequent responses as continuations of an open block, producing malformed output rather than fresh structured code. The fix is to store the completed assistant turn\u2014fence opened and closed\u2014so each turn presents a coherent, terminated artifact in history.",
+    "distractor_explanations": {
+      "A": "Using a neutral placeholder addresses a reference-pollution concern that isn't the cause of the observed failure\u2014unclosed fences, not content reuse, corrupt the outputs. Replacing content with '[code generated]' would also destroy the history's usefulness for refactoring tasks without solving the formatting context problem.",
+      "C": "Prefill markers are not stop-sequence artifacts and don't carry disproportionate token weight; they are single short strings. The corruption manifests as malformed structure, not truncation-induced missing definitions, so inflated token counts are not the failure mechanism here.",
+      "D": "Prefilling is architecturally valid in multi-turn sessions when history is managed correctly; there is no five-turn design limit. Abandoning the technique treats the symptom by eliminating the feature rather than fixing the root cause of improper history storage."
+    }
+  },
+  {
+    "question_id": "structured_data_q008",
+    "correct_letter": "C",
+    "correct_explanation": "The prefill-plus-stop-sequence pattern relies on the stop sequence as the primary termination mechanism, so max_tokens should not be the normal exit path. Setting max_tokens modestly above the observed ceiling (250\u2013300 vs. 150) lets the stop sequence handle every valid response while providing a hard backstop if the stop sequence fails to trigger. This two-layer design controls runaway cost without risking truncation of legitimate output.",
+    "distractor_explanations": {
+      "A": "Setting max_tokens exactly at the observed maximum creates a false precision problem: any valid response that exceeds 150 tokens due to a complex rule gets silently truncated, producing malformed JSON rather than a cost-saving failure.",
+      "B": "Leaving max_tokens at the model default removes the cost backstop entirely. If a stop sequence fails to trigger\u2014due to a malformed response or API edge case\u2014the model generates at full length, defeating the purpose of configuring the parameter at all.",
+      "D": "max_tokens cannot be set to zero; that is not a valid API value. Even if it were, delegating all termination to the stop sequence with no token budget provides zero protection against stop sequence failures or runaway generation."
+    }
+  },
+  {
+    "question_id": "structured_data_q004",
+    "correct_letter": "A",
+    "correct_explanation": "The prefill seed '```' leaves the format specifier position unconstrained, so Claude completes the opening fence by emitting 'json\\n' before generating content \u2014 a high-probability continuation given its training on markdown code blocks. CSV outputs don't trigger this because CSV has no conventional fence-language label, so Claude proceeds directly to data content, producing clean output that csv.reader can parse without issue.",
+    "distractor_explanations": {
+      "B": "This inverts the failure mechanism: the corruption appears at the start of the output ('json\\n{'), not the end, so a misfiring closing tag cannot be the cause. A late-firing stop sequence would produce trailing characters, not a leading format label.",
+      "C": "This misattributes the failure to parser strictness rather than output content. Both parsers receive corrupted strings; csv.reader doesn't silently discard a 'json\\n' prefix \u2014 the CSV outputs simply never contain one because Claude doesn't prepend a label to CSV fences.",
+      "D": "Stop sequences are evaluated against already-emitted tokens, not consumed ahead of generation \u2014 the API has no mechanism that would cause Claude to emit a 'disambiguation token' to recover lost context. This describes a non-existent inference behavior."
+    }
+  },
+  {
+    "question_id": "structured_data_q006",
+    "correct_letter": "A",
+    "correct_explanation": "The stop sequence halts generation at the closing fence, meaning it is never emitted\u2014so every stored assistant turn in the history ends with an unclosed '```json' block. As the session accumulates turns, Claude is shown an ever-growing chain of structurally incomplete fences, and its continuation behavior pattern-matches against this malformed history rather than attending to the current input. The schema drift is a direct consequence of history corruption caused by the stop sequence interaction, not any change in extraction logic.",
+    "distractor_explanations": {
+      "B": "Context truncation drops tokens from the beginning of the window, which would cause Claude to lose early user inputs\u2014but this produces ignorance of prior schemas, the opposite of anchoring on them. The described symptom (mirroring earlier schemas) rules out truncation as the primary cause.",
+      "C": "Claude does not treat a stateful messages list as a single unified reasoning chain that progressively hardens prior outputs into implicit constraints. This misattributes the drift to a nonexistent weighting mechanism rather than the concrete structural corruption in the stored messages.",
+      "D": "The prefill token's influence does not erode proportionally with conversation length; its effectiveness is determined by the stop sequence configuration, not by dilution from prior turns. This explanation invents a decay mechanism that does not exist in how prefilling works."
+    }
+  },
+  {
+    "question_id": "structured_data_q007",
+    "correct_letter": "A",
+    "correct_explanation": "Defense-in-depth requires independent failure boundaries: stop sequences and max_tokens must each be able to terminate generation on their own. When the stop sequence silently fails, the absence of a low max_tokens cap means every call runs to 4096 tokens\u2014a 20x+ cost multiplier on a per-token billing model that compounds across all concurrent requests before monitoring catches it. A 200-token cap would contain the blast radius to a 1x cost overrun rather than a 20x one.",
+    "distractor_explanations": {
+      "B": "Schema validation is a correctness gate, not a cost gate\u2014it fires after the API has already generated and billed for all tokens. Rejecting a 4096-token response downstream does nothing to prevent the upstream cost accrual.",
+      "C": "Stop sequences and max_tokens are evaluated independently; max_tokens is not redundant when a stop sequence is set. If the stop sequence fails for any reason, max_tokens is the only remaining hard ceiling on generation length and cost.",
+      "D": "The API does not silently switch to streaming mode based on response length; streaming is a request-level parameter set by the client. This conflates two unrelated API behaviors and misidentifies the actual failure mode."
+    }
+  },
+  {
+    "question_id": "structured_data_q009",
+    "correct_letter": "B",
+    "correct_explanation": "Inserting schema validation immediately after parsing creates a tight feedback loop: the specific validation error becomes a correction signal that lets Claude self-repair before the record reaches the consumer. This intercept-and-retry pattern addresses both the root cause (semantically invalid output) and the latency constraint by resolving failures inline rather than deferring them. The dead-letter queue is preserved only as a last resort, keeping it out of the critical path and protecting the SLA.",
+    "distractor_explanations": {
+      "A": "Routing to a dead-letter queue treats the symptom, not the cause\u2014semantically invalid rules still halt the pipeline, and the 15-minute reprocessing delay explicitly violates the downstream SLA. This option decouples failure handling but does nothing to intercept or correct bad output before it reaches the consumer.",
+      "C": "Model size reduces error frequency probabilistically but provides no hard guarantee, leaving the SLA breach risk intact. Relying on model accuracy as the sole guard against schema violations is not an architectural control\u2014it is an unverifiable assumption.",
+      "D": "A static field-name mapping handles only the specific violations it was hand-coded for; novel schema violations introduced by evolving prompts or model behavior pass through unchecked. This is brittle point-fix coverage, not a validation layer, and it does not handle structural or type-level schema failures."
+    }
+  },
+  {
+    "question_id": "structured_data_q010",
+    "correct_letter": "A",
+    "correct_explanation": "A closed-loop validation-and-retry layer directly addresses semantic drift by catching schema failures at the source and feeding structured correction context back into the Claude call before bad records propagate downstream. Appending the validation error and offending field names to the user turn gives Claude the specific signal needed to self-correct, while re-applying the prefill preserves the extraction technique. This targets the root cause\u2014field-name variance\u2014rather than masking or deferring it.",
+    "distractor_explanations": {
+      "B": "Hardcoding a skeleton constrains structure but not values, and Claude can still hallucinate field names outside the skeleton if the prompt allows any generative freedom in key selection. This is a prompt-layer patch that doesn't provide a feedback mechanism when semantic drift still occurs.",
+      "C": "Silently stripping unrecognized keys destroys information rather than correcting it\u2014an EventBridge rule built on an incomplete record is a silent data corruption failure, not a handled error. This makes the pipeline appear healthy while producing semantically wrong provisioning actions.",
+      "D": "Moving validation into the consumer defers detection past the point where correction is possible and guarantees the SLA breach continues, since failed records still accumulate above 0.1% before any human review occurs. Dead-letter queues handle unavoidable failures; this failure is correctable at the extraction layer."
+    }
+  }
+]

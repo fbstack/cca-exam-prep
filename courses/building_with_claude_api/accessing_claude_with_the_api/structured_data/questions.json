@@ -1,0 +1,191 @@
+[
+  {
+    "id": "structured_data_q002",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Whether to use assistant message prefilling combined with stop sequences, or rely solely on system prompt instructions, to extract clean structured data from Claude responses",
+    "stem": "A team's EventBridge rule generator uses the same prefill-plus-stop-sequence pattern from the lab \u2014 the assistant turn is seeded with '```json' and '```' is set as the stop sequence. A developer notices that the raw string returned by the API never contains the opening '```json' prefix or the closing '```' fence. Downstream code calls json.loads() directly on the returned string and it works correctly. The developer is confused about why the fences are absent and asks whether the implementation is broken. What is the correct explanation?",
+    "options": {
+      "A": "The stop sequence '```' is consuming the opening fence as well as the closing one, so both markers are stripped from the response by the API.",
+      "B": "The prefilled '```json' text is injected as the start of the assistant turn and never appears in the API response content; generation halts before emitting the closing fence because it triggers the stop sequence, so the returned string is pure JSON.",
+      "C": "Claude automatically detects that the caller wants raw JSON and removes markdown fences from its output regardless of the prefill or stop sequence settings.",
+      "D": "The Anthropic SDK post-processes messages.create responses to strip code fence markers before returning the content string to the caller."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to apply the prefill-plus-stop-sequence technique universally to all structured output types or to tailor the prefill token to the specific format being requested",
+    "stem": "A backend service generates JSON configs, Python snippets, and CSV exports from a single Claude integration. The team uses a generic '```' prefill for all three artifact types to keep the helper function simple. After deployment, the json.loads parser begins failing intermittently on outputs where Claude has inserted 'python' or 'csv' as the first token before the actual content. What is the most architecturally sound diagnosis and fix?",
+    "options": {
+      "A": "Add a post-processing step that strips any leading language identifier tokens before passing the output to the parser, preserving the generic prefill approach.",
+      "B": "Parameterize the prefill per artifact type \u2014 '```json', '```python', or no fence for CSV \u2014 so the token context steers Claude's next-token probabilities toward format-valid content from the first character.",
+      "C": "Lower the model temperature to reduce the variance that causes Claude to sometimes insert unexpected language identifiers before the content.",
+      "D": "Move the format constraint entirely into the system prompt, enumerating explicit rules for each output type, and remove the prefill mechanism altogether."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to apply the prefill-plus-stop-sequence technique universally to all structured output types or to tailor the prefill token to the specific format being requested",
+    "stem": "A data engineering team adapts the prefill-plus-stop-sequence pattern \u2014 where an assistant message seed like '```json' is combined with a matching stop sequence \u2014 into a multi-format extraction pipeline. The pipeline feeds Claude-generated outputs directly into json.loads, ast.parse, and csv.reader with no intermediate validation. The team uses a shared helper that always seeds with '```' and always stops on '```', regardless of the requested format. QA reports that CSV exports parse correctly 100% of the time but JSON configs fail roughly 15% of the time \u2014 the raw output strings begin with the characters 'json\\n{' rather than '{'. What is the most likely cause of the format-specific failure pattern?",
+    "options": {
+      "A": "Because the prefill seed '```' contains no format specifier, Claude's generation at position zero is unconstrained \u2014 for JSON requests, the high-probability continuation token 'json' is sometimes emitted before content begins, prepending a corrupting label string; CSV output is naturally fence-free so this ambiguity does not arise.",
+      "B": "The stop sequence '```' is matching a fence-language token that Claude emits before the closing fence \u2014 specifically, Claude sometimes emits '```json' as a closing tag rather than '```', causing the stop sequence to fire one token late and include the trailing format label in the captured output.",
+      "C": "The json.loads parser is stricter than csv.reader about leading non-whitespace characters, so the real issue is that json.loads surfaces the corruption while csv.reader silently discards it; the prefill token choice is not the root cause.",
+      "D": "The shared stop sequence '```' is being consumed by the API before Claude finishes resolving which format it is generating, causing it to emit a format disambiguation token as its first content token in order to recover context."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q005",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "How to balance assistant message prefilling for output control against multi-turn conversation history integrity when the same session accumulates many structured-generation turns",
+    "stem": "An IDE plugin uses assistant message prefilling (injecting '```python' as the opening assistant turn) to extract clean code blocks from a structured data extraction pipeline. After 15\u201320 turns, engineers notice that Claude's outputs in later turns begin with unclosed fence continuations and malformed function signatures. A senior engineer proposes storing the raw prefill fragment in conversation history exactly as sent, arguing this preserves API request fidelity. What is the most architecturally sound reason to reject this proposal?",
+    "options": {
+      "A": "Raw prefill fragments should be replaced with a neutral placeholder like '[code generated]' so Claude does not attempt to reference previous implementations during refactoring turns.",
+      "B": "Storing the raw prefill marker ('```python') as the assistant turn leaves an open code fence in history, which Claude treats as active formatting context in subsequent turns, corrupting structured outputs as the session grows.",
+      "C": "Prefill markers accumulate as stop-sequence artifacts that inflate token counts beyond the context window limit, triggering truncation of the earliest turns where prior function signatures are defined.",
+      "D": "The prefill technique should be abandoned after five turns and replaced with a system prompt instruction to emit only raw code, because prefilling is not designed for multi-turn sessions."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q006",
+    "domain": "Context Management",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "How to balance assistant message prefilling for output control against multi-turn conversation history integrity when the same session accumulates many structured-generation turns",
+    "stem": "A document processing pipeline uses the prefill-plus-stop-sequence pattern to extract clean JSON from each user submission: the assistant turn is seeded with '```json' and generation halts at the closing fence. The team maintains a running messages list so Claude can reference previously extracted schemas during follow-up normalization requests within the same session. After roughly 20 turns, operators notice Claude begins producing JSON that mirrors schemas from earlier in the session rather than the current input, and the problem worsens with each additional turn. The extraction logic itself has not changed. What is the most significant architectural cause of this drift?",
+    "options": {
+      "A": "The stop sequence terminates generation before the closing fence is emitted, so every stored assistant turn in the messages list contains only '```json' followed by raw JSON with no closing delimiter. As the history grows, Claude is presented with a long chain of unclosed code fences, which biases its continuation toward pattern-matching prior schemas rather than the current user input.",
+      "B": "The messages list is accumulating enough tokens that earlier user inputs are being silently truncated by the context window limit, causing Claude to anchor on the most recently stored extraction schemas instead of the new request.",
+      "C": "Maintaining a stateful messages list across structured-generation turns forces Claude to treat the entire session as a single reasoning chain, progressively weighting prior JSON schemas as implicit constraints on subsequent outputs regardless of the current input.",
+      "D": "The prefill token '```json' is a markdown signal rather than a semantic instruction, so its influence on output structure diminishes in proportion to the volume of prior assistant turns, eventually allowing Claude's default response style to dominate."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Whether to set a low max_tokens cap when using stop sequences for structured data extraction, or leave max_tokens at the model default",
+    "stem": "A SaaS platform uses prefill-plus-stop-sequence to extract short JSON snippets from user inputs, with outputs consistently falling under 200 tokens. The team bills per output token and leaves max_tokens at the model default of 4096, trusting the stop sequence to terminate generation early. During a routine deploy, a configuration change inadvertently URL-encodes the stop sequence characters, disabling early termination without triggering any alerts. What is the most significant architectural risk this configuration exposes the system to?",
+    "options": {
+      "A": "Without a low max_tokens cap as a secondary backstop, a stop sequence failure causes Claude to generate up to 4096 tokens per call, multiplying per-request costs by 20x or more before the issue is detected.",
+      "B": "The risk is minimal in practice because JSON schema validation on the downstream parser will reject malformed or overlong responses quickly, effectively containing the blast radius before significant cost accrues.",
+      "C": "The model default max_tokens is appropriate here because stop sequences are evaluated before token counting begins, making max_tokens redundant when a stop sequence is configured.",
+      "D": "The primary risk is that without an explicit max_tokens cap, the API will silently fall back to streaming mode for long responses, causing the downstream JSON parser to receive an incomplete byte stream and raise a connection error rather than a cost overrun."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Whether to set a low max_tokens cap when using stop sequences for structured data extraction, or leave max_tokens at the model default",
+    "stem": "A backend service uses the prefill-plus-stop-sequence pattern \u2014 prefilling the assistant turn with ` ```json ` and passing `stop_sequences=[\"` ``` `\"]` \u2014 to extract EventBridge rules as raw JSON. Outputs are consistently under 150 tokens. The team is now configuring max_tokens for these calls and must choose a value that controls runaway generation costs without risking truncation of valid output. Which max_tokens configuration best balances these competing constraints?",
+    "options": {
+      "A": "Set max_tokens to exactly 150 to match the observed maximum output length, ensuring the cost ceiling is as tight as possible.",
+      "B": "Leave max_tokens at the model default because the stop sequence already guarantees early termination, and a low cap could interfere with generation quality on complex rules.",
+      "C": "Set max_tokens to a value modestly above the expected ceiling \u2014 such as 250 to 300 \u2014 so the stop sequence handles normal termination while max_tokens acts as a hard cost backstop against stop sequence failures.",
+      "D": "Set max_tokens to zero to delegate all termination control entirely to the stop sequence, which is the intended mechanism for this pattern."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "plausible misconception",
+      "C": "correct",
+      "D": "clearly-wrong"
+    }
+  },
+  {
+    "id": "structured_data_q009",
+    "domain": "Agentic Architecture",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Whether to expose raw Claude API response strings directly to a downstream microservice or to add a validation-and-retry layer between the Claude call and the consumer",
+    "stem": "A data pipeline uses Claude to generate JSON transformation rules that are applied in real time to streaming records at 10,000 per minute. Semantically invalid rules \u2014 those that pass json.loads() but violate the downstream schema \u2014 occasionally halt the pipeline. The SLA mandates fewer than 0.1% failed records per hour, and reprocessing from a dead-letter queue introduces a 15-minute delay that violates downstream commitments. The pipeline's Claude integration currently passes raw API response strings directly to the downstream microservice with no intermediate validation. What is the most architecturally sound change to this integration?",
+    "options": {
+      "A": "Route failed records to a dead-letter queue and reprocess them asynchronously; this decouples the Claude call from the consumer and preserves pipeline throughput during transient failures.",
+      "B": "Insert a JSON Schema validation step immediately after parsing; on schema failure, retry the Claude call with the specific validation error surfaced as a correction signal, and only escalate unresolvable failures to the dead-letter queue.",
+      "C": "Switch to a larger Claude model to reduce the frequency of semantic errors; the improved accuracy will bring the pipeline within SLA without requiring additional validation infrastructure between Claude and the consumer.",
+      "D": "Apply post-hoc field-name normalization to every Claude response using a static mapping table before passing it to the consumer, eliminating semantic schema violations without requiring retries."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_q010",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Whether to expose raw Claude API response strings directly to a downstream microservice or to add a validation-and-retry layer between the Claude call and the consumer",
+    "stem": "A team builds a structured data extraction pipeline for an AWS infrastructure provisioning platform. They use assistant message prefilling combined with stop sequences \u2014 seeding the assistant turn with '```json' and stopping on the closing '```' \u2014 to strip markdown wrapping and deliver clean JSON strings to a downstream microservice that applies EventBridge rules directly to production accounts. After three weeks in production, the SRE team reports that 0.4% of records per hour are triggering crashes: the extracted strings are syntactically valid JSON but contain semantically incorrect field names that the consumer cannot map to its EventBridge schema. The prefill-and-stop extraction layer is working correctly; no validation layer exists between it and the consumer. The platform's SLA requires fewer than 0.1% failed records per hour. What is the highest-leverage architectural addition to meet the SLA without replacing the extraction technique?",
+    "options": {
+      "A": "Add JSON Schema validation immediately after the prefill-and-stop extraction step; on schema failure, reissue the Claude call with the validation error and the offending field names appended to the user turn as a correction hint, then re-apply the prefill before passing output downstream.",
+      "B": "Extend the assistant prefill to include a fully populated JSON skeleton with hardcoded field names, so Claude fills in values rather than generating structure \u2014 eliminating semantic field-name variance at the prompt layer without requiring a downstream validation step.",
+      "C": "Replace the stop-sequence extraction technique with a post-processing regex that strips any key not present in the target EventBridge schema before the consumer receives the record, keeping the pipeline stateless.",
+      "D": "Move schema validation into the consumer microservice and emit failed records to a dead-letter queue for human review; this preserves extraction-layer statelessness and allows the consumer to define its own tolerance for schema drift over time."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "near-miss",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  }
+]

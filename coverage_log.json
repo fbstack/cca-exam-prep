@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-14",
+  "last_updated": "2026-05-15",
   "exam_format": {
     "total_questions": 60,
     "time_minutes": 120,
@@ -10,16 +10,17 @@
     "Agentic Architecture": {
       "exam_weight": 0.27,
       "est_exam_questions": 16,
-      "questions_generated": 25,
+      "questions_generated": 26,
       "foundational": 1,
       "intermediate": 11,
-      "architect": 13,
+      "architect": 14,
       "lessons_covered": [
         "accessing_the_api",
         "getting_an_api_key",
         "making_api_calls",
         "chat_exercise",
-        "response_streaming"
+        "response_streaming",
+        "structured_data"
       ]
     },
     "Claude Code Configuration": {
@@ -36,16 +37,17 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 53,
-      "foundational": 10,
-      "intermediate": 27,
-      "architect": 16,
+      "questions_generated": 59,
+      "foundational": 11,
+      "intermediate": 31,
+      "architect": 17,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
         "system_prompts",
         "system_prompts_exercise",
-        "temperature"
+        "temperature",
+        "structured_data"
       ]
     },
     "Tool Design & MCP": {
@@ -60,16 +62,17 @@
     "Context Management": {
       "exam_weight": 0.15,
       "est_exam_questions": 9,
-      "questions_generated": 20,
+      "questions_generated": 22,
       "foundational": 5,
       "intermediate": 6,
-      "architect": 9,
+      "architect": 11,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
         "making_api_calls",
         "multi_turn_conversations",
-        "chat_exercise"
+        "chat_exercise",
+        "structured_data"
       ]
     }
   }
