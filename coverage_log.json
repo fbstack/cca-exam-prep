@@ -37,17 +37,18 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 59,
-      "foundational": 11,
-      "intermediate": 31,
-      "architect": 17,
+      "questions_generated": 68,
+      "foundational": 12,
+      "intermediate": 35,
+      "architect": 21,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
         "system_prompts",
         "system_prompts_exercise",
         "temperature",
-        "structured_data"
+        "structured_data",
+        "structured_data_exercise"
       ]
     },
     "Tool Design & MCP": {

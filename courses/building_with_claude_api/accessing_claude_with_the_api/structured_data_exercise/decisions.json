@@ -1,0 +1,72 @@
+[
+  {
+    "decision": "Choose between assistant message prefilling and system prompt instructions to enforce structured output format",
+    "context": "A production pipeline extracts AWS CLI commands from Claude and pipes them directly into a shell executor. Any prose, markdown fences, or comments in the output will cause the executor to fail. The team must decide how to constrain Claude's output format.",
+    "options": [
+      "Add a system prompt instruction: 'Respond only with raw bash commands, no explanation, no markdown'",
+      "Use assistant message prefilling to inject the opening code fence and specify the exact format boundary",
+      "Use JSON mode and parse the commands out of a structured response field"
+    ],
+    "correct": "Option B: Assistant message prefilling is more reliable because it places Claude inside the desired output format \u2014 Claude believes it has already started the response in the correct format, making deviation structurally difficult rather than just instructed.",
+    "constraint": "The output must be parseable without post-processing regex; prefilling guarantees format compliance at the generation level, not the instruction level.",
+    "failure_mode": "System prompt instructions alone are probabilistic \u2014 Claude may still add a preamble like 'Here are the commands:' or wrap output in markdown, causing the shell executor to receive non-executable text and fail silently or with parse errors.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Decide whether to include the stop sequence character in downstream processing logic",
+    "context": "A code extraction service uses stop_sequences=['```'] to halt Claude generation at the closing fence of a bash block. The extracted string is written to a file and executed. A junior engineer assumes the stop sequence is appended to the response and writes a strip() call to remove it before execution.",
+    "options": [
+      "Assume the stop sequence IS included in the response text and strip it before use",
+      "Assume the stop sequence is NOT included in the response text and use the output directly",
+      "Always strip any trailing backtick characters defensively regardless of API behavior"
+    ],
+    "correct": "Option B: The Anthropic API excludes the matched stop sequence from the returned text. The response contains only the content up to but not including the stop sequence string.",
+    "constraint": "The API contract guarantees the stop sequence is not included; writing strip logic based on the wrong assumption introduces a bug when the output legitimately ends with backtick-adjacent content.",
+    "failure_mode": "If the engineer incorrectly strips content expecting the stop sequence to be present, the logic is harmless in simple cases but creates a latent bug. If the assumption is reversed \u2014 expecting the stop sequence absent but it is present \u2014 the closing fence characters are passed to the shell executor, causing a syntax error on every invocation.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Choose between prefill-plus-stop-sequence, JSON mode, and post-processing regex to extract structured data from Claude in a high-volume production pipeline",
+    "context": "A DevOps automation platform calls Claude 50,000 times per day to generate infrastructure commands in multiple formats: bash, SQL, and YAML. Output is consumed by three downstream systems with zero tolerance for format noise. The team is evaluating extraction strategies for reliability, latency, and maintainability at scale.",
+    "options": [
+      "Use post-processing regex and markdown fence strippers on raw Claude output",
+      "Use native JSON mode and embed all structured outputs as string fields in a JSON envelope",
+      "Use prefill-plus-stop-sequence with format-specific delimiters per output type (```bash, ```sql, ```yaml)"
+    ],
+    "correct": "Option C: Prefill-plus-stop-sequence provides deterministic extraction boundaries per format type without the overhead of JSON envelope parsing or the fragility of regex against variable Claude prose output.",
+    "constraint": "At 50,000 calls/day across three format types, regex fragility compounds \u2014 any Claude model update that changes prose phrasing can break regex patterns. JSON mode adds envelope parsing latency and requires downstream systems to unwrap the string field. Prefill-plus-stop-sequence is format-native and model-update resilient.",
+    "failure_mode": "Regex-based post-processing breaks when Claude changes phrasing around code blocks after a model update, causing silent extraction failures that pass malformed commands to infrastructure executors. JSON mode wrapping requires all three downstream systems to be updated to unwrap the envelope, and a missed update causes a type mismatch crash.",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Decide where to specify output format constraints \u2014 in the prefill string versus in the user message prompt",
+    "context": "A team building a SQL generation tool instructs Claude to return only SQL in the user message: 'Return only the SQL query, no explanation.' They also experiment with moving the format constraint into the assistant prefill: 'Here is the query without comments:\\n```sql'. They must decide which placement to standardize on.",
+    "options": [
+      "Specify format constraints only in the user message prompt text",
+      "Specify format constraints only in the assistant prefill turn",
+      "Specify format constraints in both the user message and the assistant prefill"
+    ],
+    "correct": "Option B: Placing format constraints in the assistant prefill is more reliable because it establishes Claude's output context directly \u2014 Claude processes the prefill as content it has already generated, making it structurally committed to the format rather than following an instruction it might override.",
+    "constraint": "User message instructions are processed as directives Claude may interpret and then deviate from when generating naturally. The prefill is processed as established output state, which Claude continues rather than reconsidering.",
+    "failure_mode": "Relying solely on user message format instructions results in occasional non-compliance \u2014 Claude may prepend 'Sure, here is the SQL:' or add trailing commentary, requiring regex post-processing to strip. At scale this causes intermittent downstream parse failures that are difficult to reproduce and debug.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Determine how to handle multiple structured output types in a single conversation turn using stop sequences",
+    "context": "An infrastructure-as-code tool needs Claude to return both a bash script and a YAML configuration in a single response, each cleanly separated for routing to different downstream consumers. The engineer must decide how to use stop_sequences to handle multiple delimited blocks in one API call.",
+    "options": [
+      "Make two separate API calls, one for bash with stop_sequences=['```'] and one for YAML with stop_sequences=['```']",
+      "Specify multiple stop sequences in a single call and parse the single response for both blocks",
+      "Use a single stop sequence on the first block, extract it, then make a second call prefilled past the first block to extract the second"
+    ],
+    "correct": "Option A: Two separate API calls with targeted prefills is the most reliable pattern. stop_sequences halts at the FIRST match, so a single call cannot cleanly extract two sequential delimited blocks \u2014 generation stops after the first closing fence regardless of how many blocks follow.",
+    "constraint": "The stop_sequences parameter halts generation at the first matched sequence encountered; it cannot be used to extract multiple sequential delimited blocks in a single response. Attempting to do so either stops too early or requires complex stateful re-entry logic that defeats the purpose of the pattern.",
+    "failure_mode": "Using a single API call with stop_sequences=['```'] to extract both blocks causes generation to halt after the first closing fence, discarding the YAML block entirely. The downstream YAML consumer receives empty input, and the failure is silent \u2014 the API call succeeds with a 200 and returns partial content.",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect"
+  }
+]

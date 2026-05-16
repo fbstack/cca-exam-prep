@@ -1,0 +1,92 @@
+[
+  {
+    "question_id": "structured_data_exercise_q001",
+    "correct_letter": "B",
+    "correct_explanation": "Assistant prefilling exploits a structural constraint: Claude treats the prefill as its own already-in-progress output, so beginning mid-command forces continuation in that format rather than allowing a fresh conversational opener. This architectural enforcement is stronger than instructional compliance because it removes the decision point entirely\u2014there is no 'before the commands' position available for preamble to occupy.",
+    "distractor_explanations": {
+      "A": "Strengthening the system prompt instruction fails because it still relies on Claude choosing to comply at inference time, which is exactly the mechanism that is already failing in production. Adding more emphatic wording does not change the fundamental reliance on instructional compliance over structural constraint.",
+      "C": "Temperature controls output randomness, not the model's tendency to follow conversational conventions versus instructions. Preamble generation is a behavioral pattern, not a sampling artifact, so lowering temperature does not reliably suppress it.",
+      "D": "Post-processing with regex introduces a brittle dependency: any preamble line that contains a valid-looking command pattern will pass through, and any real command that matches the strip pattern will be silently dropped\u2014creating exactly the kind of silent failure a production executor cannot tolerate."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q003",
+    "correct_letter": "A",
+    "correct_explanation": "The Anthropic API's stop sequence mechanism halts generation when the sequence is matched and excludes that sequence from the returned content\u2014the response ends at the last token before the fence. Because the closing ``` never appears in the API response, the strip call operates on a character pattern that is structurally absent, making it dead code. The validation function should be designed around the guaranteed API contract, not a misreading of how stop sequences work.",
+    "distractor_explanations": {
+      "B": "The stop sequence exclusion behavior is a documented, stable API contract, not a version-dependent implementation detail. Treating it as inconsistent introduces unnecessary complexity based on a false premise.",
+      "C": "The API's exclusion of the matched stop sequence applies to the full sequence regardless of character count\u2014there is no partial-inclusion rule for multi-character sequences like ```. This near-miss invents a length-based distinction that does not exist in the API specification.",
+      "D": "Stop sequences do guarantee a clean output boundary by definition: generation halts before the sequence is emitted. Replacing the strip call with a broader regex introduces scope creep that modifies content the model legitimately generated, rather than fixing a real boundary problem."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q004",
+    "correct_letter": "C",
+    "correct_explanation": "The stop_sequences parameter triggers on any match of the specified string, so a bash backtick subshell expression like `$(...)` causes premature termination mid-command when the closing backtick is encountered. This leaves the executor with a syntactically incomplete command ending in an unmatched backtick, producing the observed shell errors. The pipeline's lack of post-processing means this truncated output reaches the executor unmodified.",
+    "distractor_explanations": {
+      "A": "The Anthropic API contract explicitly excludes the stop sequence from the returned completion \u2014 the stop string never appears in the response body. The failure mode here isn't SDK non-compliance; the backtick is coming from generated content, not the stop sequence itself.",
+      "B": "Assistant prefill content is not echoed back in the API response \u2014 Claude continues generation from the prefill without returning it. The closing fence would also be caught by the stop sequence before it could appear in output, so this mechanism doesn't produce the observed artifact.",
+      "D": "Newline characters do not render as backticks under any standard terminal or shell configuration. This explanation invents a fictional failure mode unconnected to how stop sequences, shell metacharacters, or process logs actually behave."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q005",
+    "correct_letter": "C",
+    "correct_explanation": "Prefilling the assistant turn with the opening fence forces Claude's continuation to begin inside the code block, and the matching stop sequence causes generation to halt exactly at the closing fence\u2014extraction reduces to stripping the known prefix, not parsing unpredictable prose. This creates deterministic extraction boundaries that are structurally immune to model update changes in surrounding language. Downstream executors receive clean command text with no envelope to unwrap and no regex fragility.",
+    "distractor_explanations": {
+      "A": "JSON mode solves the extraction problem but violates the constraint of requiring no downstream system changes\u2014all three executor systems must be updated to unwrap the envelope, making this a breaking migration rather than a resilient architecture.",
+      "B": "Hardening regex against a shifting target compounds the original failure mode: anchoring to multiple markers still depends on Claude's prose patterns remaining stable, so any future model update reintroduces silent extraction failures.",
+      "D": "System-prompt negative constraints rely on instruction-following compliance, not structural enforcement\u2014model updates can shift prose generation behavior regardless of the instruction, leaving extraction just as fragile as the current regex approach."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q006",
+    "correct_letter": "B",
+    "correct_explanation": "Stop sequences terminate generation cleanly when encountered \u2014 they don't fire mid-token or produce partial output on their own. Partial commands occur when max_tokens is exhausted before the closing fence is reached, cutting generation mid-statement. The fix is format-specific token budget auditing, not abandoning a pattern whose stop sequence mechanism is functioning correctly.",
+    "distractor_explanations": {
+      "A": "Stop sequences are deterministic string-match triggers, not probability-threshold events \u2014 when the stop token appears in the output stream, generation halts completely at that boundary. The SRE lead's 'non-deterministic interrupt' framing misidentifies the mechanism; the pattern itself is not the failure point.",
+      "C": "JSON mode constrains output structure but does not eliminate token exhaustion \u2014 a max_tokens limit reached mid-generation will still produce incomplete output even within a schema-constrained mode. The root cause (insufficient token budget) remains unaddressed by switching extraction strategies.",
+      "D": "Prefill tokens count against the input context, not the output token budget, so shortening the prefill string does not increase available generation space. This conflates input and output token accounting and would not reduce partial-generation rate."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Assistant prefill locks the output state before Claude generates a single token \u2014 Claude continues an already-begun SQL block rather than deciding how to comply with a format instruction. This eliminates the compliance gap entirely because there is no interpretation step where a conversational opener can be inserted. The constraint is structural, not instructional.",
+    "distractor_explanations": {
+      "A": "Repetition and emphasis are still instructions Claude must interpret at generation time, leaving the same probabilistic compliance gap that produces the 1-in-12 failure. Stronger wording reduces non-compliance frequency but does not eliminate it architecturally.",
+      "C": "Temperature controls sampling randomness, not instruction-following behavior \u2014 non-compliance here is a format interpretation issue, not a high-variance decoding issue. Lowering temperature does not prevent Claude from prepending prose when it decides a preamble is appropriate.",
+      "D": "Adding a system prompt restates the rule in a higher-priority position but still relies on Claude interpreting and honoring a format directive at generation time. The intermittent failure mode persists because the output state remains unconstrained at the moment generation begins."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q009",
+    "correct_letter": "B",
+    "correct_explanation": "The stop_sequences parameter terminates generation the moment the first matching token sequence is encountered\u2014Claude halts immediately after closing the bash block, so the YAML block is never written to the response. The correct architectural pattern is two independent API calls, each with its own prefill and stop sequence, so each artifact is captured in isolation and routed to its respective consumer.",
+    "distractor_explanations": {
+      "A": "Adding a second stop sequence '```yaml' would still cause generation to halt at the first matched stop token; stop sequences are OR conditions, not ordered gates. Neither stop sequence resolves the fundamental problem that only one block can be generated before halting.",
+      "C": "The specificity of the prefill language tag does not affect whether generation continues past a stop sequence match. Changing '```bash' to '```' does nothing to prevent the stop sequence from terminating output after the first closing fence.",
+      "D": "Diagnosing a race condition contradicts the observable evidence: HTTP 200 with empty YAML payloads across all calls is deterministic, not intermittent. The YAML block is absent from the raw API response itself, so no amount of buffering in the router can recover content that was never generated."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q010",
+    "correct_letter": "B",
+    "correct_explanation": "stop_sequences is a terminal condition, not a pagination mechanism \u2014 the moment any listed sequence appears in output, generation stops and cannot resume within the same API call. Adding '```json' simply creates an additional early-exit trigger, potentially halting generation even sooner if that string appears before the Terraform block closes. Extracting two independent artifacts requires two independent API calls, each with its own prefill and stop sequence.",
+    "distractor_explanations": {
+      "A": "stop_sequences has no ordered or sequential execution mode \u2014 all listed sequences are monitored simultaneously, and the first match terminates generation entirely. There is no 'pause and resume' behavior in the API.",
+      "C": "Reordering the prefill changes which artifact appears first but does not change the fundamental problem: generation still halts permanently after the first matched stop sequence, leaving the second artifact absent. This is a sequencing fix applied to a termination-model misunderstanding.",
+      "D": "The Terraform block appears correctly in every response, which rules out a token budget exhaustion root cause. The failure is architectural \u2014 the extraction pattern only captures one artifact per call \u2014 not a capacity constraint."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q008",
+    "correct_letter": "B",
+    "correct_explanation": "The prefill works by establishing output state rather than issuing an instruction \u2014 Claude continues a string already in progress, so it cannot insert prose before the SQL begins. A user message directive, by contrast, creates a structural gap between the instruction and the first token of output, during which non-compliant preamble can appear before the stop sequence has any boundary to enforce. In a high-volume pipeline, even a small non-compliance rate in that window causes the parse failures the team is trying to eliminate.",
+    "distractor_explanations": {
+      "A": "System prompt instructions still operate as directives Claude interprets, not as pre-written output state \u2014 they do not eliminate the structural window before the first output token. A system prompt reduces non-compliance probability but does not provide the same deterministic output-start guarantee as a prefill.",
+      "C": "Removing a prefill does not increase prompt token count in any meaningful way \u2014 the prefill appears in the assistant turn, not the prompt, and re-deriving format intent is not a discrete computational cost that scales with volume. This conflates token economics with architectural compliance guarantees.",
+      "D": "Benchmark compliance rates do not translate to zero parse failures in production, and the stop sequence only controls where generation ends, not where prose-free output begins. The argument concedes residual failure exists while dismissing the mechanism that eliminates the failure mode entirely."
+    }
+  }
+]

@@ -1,0 +1,191 @@
+[
+  {
+    "id": "structured_data_exercise_q001",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Choose between assistant message prefilling and system prompt instructions to enforce structured output format",
+    "stem": "A DevOps team has built a structured data extraction pipeline that takes Claude's output and pipes it directly into a shell executor to run AWS CLI commands. The system prompt instructs Claude: 'Respond only with raw bash commands, no explanation, no markdown.' During a production incident, the executor begins failing because Claude occasionally opens its response with 'Here are the commands:' before listing the bash code. What is the most architecturally sound fix?",
+    "options": {
+      "A": "Strengthen the system prompt instruction by adding 'Never include any preamble or introductory text before the commands.'",
+      "B": "Inject an assistant prefill that places Claude structurally inside the bash output, so deviation from raw commands requires Claude to contradict its own in-progress response.",
+      "C": "Lower the model temperature to reduce the likelihood of Claude generating conversational preamble before the commands.",
+      "D": "Add a post-processing step that strips any non-command lines using a regex pattern before passing output to the executor."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Decide whether to include the stop sequence character in downstream processing logic",
+    "stem": "A platform engineering team builds a structured data extraction service that uses stop_sequences=['```'] to halt Claude at the closing fence of a bash block. The raw API response is piped into a validation function before being written to an execution queue. A code reviewer flags that the validation function includes a call to strip trailing backtick characters, arguing this is necessary because the stop sequence terminates the response. What is the correct architectural assessment of this design?",
+    "options": {
+      "A": "The strip call is unnecessary because the Anthropic API excludes the matched stop sequence from the returned content, meaning the response already ends cleanly at the last generated token before the fence.",
+      "B": "The strip call is a sound defensive measure because stop sequences behave inconsistently across model versions and may or may not appear in the response depending on generation conditions.",
+      "C": "The strip call is redundant only when the stop sequence is a single character; multi-character sequences like '```' are partially included in the response and require trimming.",
+      "D": "The strip call should be replaced with a regex that removes all markdown fence syntax, since stop sequences only prevent further generation without guaranteeing clean output boundaries."
+    },
+    "correct": "A",
+    "distractor_types": {
+      "A": "correct",
+      "B": "plausible misconception",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Decide whether to include the stop sequence character in downstream processing logic",
+    "stem": "A DevOps team adapts the AWS CLI command extraction pattern \u2014 using assistant prefill to open a code fence and stop_sequences=['```'] to close it \u2014 for a production pipeline that generates and immediately executes infrastructure teardown scripts. During a routine audit, a senior engineer notices the executor occasionally receives a line ending with a backtick character, causing shell syntax errors. The pipeline uses no post-processing on the API response before passing it to the executor. What is the most likely cause of these syntax errors?",
+    "options": {
+      "A": "The stop sequence '```' is being included in the API response when Claude's output contains a closing fence, indicating the stop sequence exclusion contract is not being applied correctly by the client SDK version in use.",
+      "B": "The assistant prefill injects '```bash' which Claude echoes back in full including the closing fence; the stop sequence only prevents additional generation after the fence, not its inclusion in the returned text.",
+      "C": "Claude is generating legitimate bash commands that end with backtick-delimited subshell expressions such as `$(...)`, and the stop_sequences parameter is triggering prematurely on these characters, truncating valid commands and leaving an unmatched backtick in the output.",
+      "D": "The executor is misinterpreting the newline character appended after the last generated token as a shell metacharacter, which under certain terminal emulator configurations renders as a backtick in the process log."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "plausible misconception",
+      "C": "correct",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q005",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Choose between prefill-plus-stop-sequence, JSON mode, and post-processing regex to extract structured data from Claude in a high-volume production pipeline",
+    "stem": "A DevOps automation platform calls Claude 50,000 times per day to generate infrastructure commands in three formats: bash, SQL, and YAML. The team currently uses regex patterns to strip markdown fences from raw Claude output before passing commands to downstream executors. After a Claude model update, the prose phrasing around code blocks shifts slightly, causing regex matches to fail silently \u2014 malformed commands reach infrastructure executors without raising exceptions. The team must choose a new extraction architecture that is resilient to future model updates and requires no downstream system changes. What is the most architecturally sound extraction strategy?",
+    "options": {
+      "A": "Wrap all Claude outputs in a JSON envelope using native JSON mode, embedding each command type as a string field, and update all three downstream systems to unwrap the envelope before executing commands.",
+      "B": "Strengthen the regex patterns by anchoring them to multiple Claude output markers and add a validation layer that rejects outputs not matching any known pattern before they reach executors.",
+      "C": "Use assistant message prefilling to inject format-specific opening fences per output type and set matching stop sequences so generation halts at the closing fence, returning clean command text with deterministic extraction boundaries.",
+      "D": "Move format specification entirely into the system prompt with explicit negative constraints instructing Claude never to include prose, comments, or markdown decoration around commands."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "clearly-wrong",
+      "C": "correct",
+      "D": "plausible misconception"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q006",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Choose between prefill-plus-stop-sequence, JSON mode, and post-processing regex to extract structured data from Claude in a high-volume production pipeline",
+    "stem": "A platform engineering team has deployed a command generation service modeled on the prefill-plus-stop-sequence pattern \u2014 the assistant turn is seeded with the opening fence for each format type, and stop_sequences is set to the corresponding closing fence token. At 50,000 daily calls across bash, SQL, and YAML endpoints, the team observes that roughly 0.3% of responses contain partial command sequences: the stop sequence fired correctly, but the prefill forced Claude into an incomplete generation mid-statement. The SRE lead argues this proves the pattern is unreliable and recommends switching to JSON mode with schema validation. The lead architect disagrees. What is the most accurate architectural assessment of the partial-generation failures?",
+    "options": {
+      "A": "The partial generations confirm the SRE lead's diagnosis \u2014 stop sequences interrupt generation non-deterministically when Claude's internal token probability crosses a threshold, making the pattern unsuitable for commands that must be syntactically complete.",
+      "B": "The partial generations are caused by max_tokens limits being reached before the stop sequence fires, not by stop sequence behavior itself; the fix is to audit token budgets per format type, not to abandon the extraction pattern.",
+      "C": "Switching to JSON mode with schema validation would eliminate partial generations because the model is constrained to produce only schema-conformant output before any stop condition is evaluated.",
+      "D": "The prefill injection is consuming tokens that Claude would otherwise use for command generation, so reducing the prefill string length will proportionally reduce the partial-generation rate across all three format types."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly-wrong"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q007",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Decide where to specify output format constraints \u2014 in the prefill string versus in the user message prompt",
+    "stem": "A team runs a SQL generation service that pipes Claude's output directly into a query executor. Their user message instructs Claude: 'Return only the SQL query, no explanation.' In production, roughly 1 in 12 responses begins with 'Sure, here is the query:' before the SQL, causing downstream parse failures that are intermittent and difficult to reproduce. The team wants to eliminate the non-compliance without adding a post-processing regex layer. What is the most architecturally sound change to make?",
+    "options": {
+      "A": "Strengthen the instruction by repeating the format constraint twice in the user message and adding 'DO NOT include any prose under any circumstances.'",
+      "B": "Move the format constraint into an assistant prefill turn that begins the SQL block directly, so Claude continues established output state rather than interpreting a format directive.",
+      "C": "Lower the model's temperature to reduce response variance, since non-compliance is a probabilistic deviation from the most likely output.",
+      "D": "Add a system prompt that re-states the format rule, reserving the user message exclusively for the natural-language query."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "near-miss"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q008",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Decide where to specify output format constraints \u2014 in the prefill string versus in the user message prompt",
+    "stem": "A data platform team extracts structured records from Claude using the same prefill-plus-stop-sequence pattern used in the AWS CLI exercise \u2014 injecting an assistant turn that opens a code fence and halting generation with a matching stop sequence. After migrating this pipeline to handle SQL instead of bash, a senior engineer proposes removing the assistant prefill and relying solely on a user message instruction: 'Output only the SQL, no prose.' She argues the prefill is unnecessary complexity since the stop sequence already controls where generation ends. In a high-volume production pipeline where intermittent non-compliance causes downstream parse failures, what is the strongest architectural argument against her proposal?",
+    "options": {
+      "A": "A system prompt instruction such as 'Respond only with SQL, no preamble' is architecturally equivalent to a prefill and would be a safer replacement, since system prompt directives are processed before the assistant turn and carry higher instruction weight.",
+      "B": "User message format instructions are processed as directives Claude may interpret and then deviate from; the prefill establishes output state Claude continues, eliminating the structural window in which prose preambles can appear before the stop boundary is reached.",
+      "C": "Removing the prefill increases prompt token count because Claude must re-derive format intent from the user message on every call, raising latency and cost at high volume.",
+      "D": "A sufficiently strict stop sequence is reliable enough on its own, because Claude's compliance rate on short format directives exceeds 99% in benchmark evaluations \u2014 making the prefill an over-engineering choice that adds latency without meaningfully reducing parse failures."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q009",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Determine how to handle multiple structured output types in a single conversation turn using stop sequences",
+    "stem": "An infrastructure-as-code platform uses Claude to generate provisioning artifacts. For each deployment request, a downstream router must receive a bash script routed to an execution engine and a YAML configuration routed to a state store. An engineer proposes a single API call with assistant prefill set to '```bash' and stop_sequences=['```'] to capture both blocks sequentially in one response. After integration testing, the YAML consumer consistently receives empty payloads, but all API calls return HTTP 200. What is the most architecturally sound diagnosis and remediation?",
+    "options": {
+      "A": "The stop sequence is consuming the closing fence character, so the YAML block starts without a proper delimiter; adding a second stop sequence '```yaml' would allow both blocks to be captured before generation halts.",
+      "B": "The stop_sequences parameter halts generation at the first matched token sequence regardless of how many delimited blocks follow; the YAML block is never generated. The correct pattern is two independent API calls, each with its own targeted prefill and stop sequence, routing results to their respective consumers.",
+      "C": "The assistant prefill is too specific; using a generic '```' prefill instead of '```bash' would allow Claude to infer the correct language for each block and continue generating until both are complete.",
+      "D": "The failure is caused by a race condition in the downstream router; the YAML block is present in the raw response but is being dropped before it reaches the state store. Adding a response buffer would resolve the empty payload issue without changing the API call structure."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "structured_data_exercise_q010",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Determine how to handle multiple structured output types in a single conversation turn using stop sequences",
+    "stem": "A platform engineering team has adapted the prefill-plus-stop-sequence extraction pattern \u2014 injecting an assistant turn that opens a code fence and halting generation with stop_sequences=['```'] \u2014 to extract both a Terraform resource block and an IAM policy JSON from a single Claude response. During load testing, the IAM policy consumer reports that 100% of responses contain only the Terraform block; the IAM JSON is never present. The team's lead argues that adding '```json' as a second entry in the stop_sequences list will fix the issue by giving Claude a second boundary to stop at. What is the most accurate assessment of this proposed fix?",
+    "options": {
+      "A": "The fix is valid because stop_sequences acts as an ordered list of boundaries; Claude will pause at '```' after the Terraform block, resume generation, and then pause again at '```json' to delimit the IAM policy block cleanly.",
+      "B": "The proposed fix will not resolve the issue. The stop_sequences parameter halts generation permanently at the first sequence matched anywhere in the output; adding '```json' provides an additional early-exit trigger but does not allow resumption. The correct remediation is to issue two separate API calls, each prefilled and stopped independently for its target artifact.",
+      "C": "The fix will work only if the IAM policy block is prefilled into the assistant turn before the Terraform block, reordering generation so the JSON boundary is encountered first and halts at the correct artifact.",
+      "D": "The root cause is model context length; the Terraform block is consuming the available output tokens before Claude can generate the IAM policy. Increasing max_tokens will allow both blocks to appear in a single response."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  }
+]
