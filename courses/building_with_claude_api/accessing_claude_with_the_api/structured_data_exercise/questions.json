@@ -47,18 +47,18 @@
     "difficulty": "intermediate",
     "type": "lab",
     "decision_source": "Decide whether to include the stop sequence character in downstream processing logic",
-    "stem": "A DevOps team adapts the AWS CLI command extraction pattern \u2014 using assistant prefill to open a code fence and stop_sequences=['```'] to close it \u2014 for a production pipeline that generates and immediately executes infrastructure teardown scripts. During a routine audit, a senior engineer notices the executor occasionally receives a line ending with a backtick character, causing shell syntax errors. The pipeline uses no post-processing on the API response before passing it to the executor. What is the most likely cause of these syntax errors?",
+    "stem": "A DevOps team adapts the AWS CLI command extraction pattern \u2014 using assistant prefill to open a code fence and stop_sequences=['```'] to close it \u2014 for a production pipeline that generates and immediately executes infrastructure teardown scripts. One of the generated scripts includes a heredoc block with an inline comment containing the string '```' as a markdown example (e.g., # Use a code fence like ``` to wrap commands). During a routine audit, the executor reports that teardown scripts are being truncated mid-execution, leaving infrastructure in a partially torn-down state. The pipeline uses no post-processing on the API response before passing it to the executor. What is the most likely architectural cause of the truncation?",
     "options": {
-      "A": "The stop sequence '```' is being included in the API response when Claude's output contains a closing fence, indicating the stop sequence exclusion contract is not being applied correctly by the client SDK version in use.",
-      "B": "The assistant prefill injects '```bash' which Claude echoes back in full including the closing fence; the stop sequence only prevents additional generation after the fence, not its inclusion in the returned text.",
-      "C": "Claude is generating legitimate bash commands that end with backtick-delimited subshell expressions such as `$(...)`, and the stop_sequences parameter is triggering prematurely on these characters, truncating valid commands and leaving an unmatched backtick in the output.",
-      "D": "The executor is misinterpreting the newline character appended after the last generated token as a shell metacharacter, which under certain terminal emulator configurations renders as a backtick in the process log."
+      "A": "The stop sequence '```' is being matched against the assistant prefill content rather than against newly generated tokens, so the API halts generation at the opening fence instead of the closing one.",
+      "B": "The stop sequence '```' triggers as soon as Claude generates the triple-backtick string inside the heredoc comment, terminating the response before the remaining teardown commands are produced \u2014 the executor then receives an incomplete script.",
+      "C": "The assistant prefill injects the opening fence but Claude does not echo it back in the API response; the stop sequence therefore never fires because Claude omits the closing fence entirely when prefill is active.",
+      "D": "The executor is misinterpreting the final newline appended after the last generated token as a shell metacharacter, causing the shell to treat the truncated heredoc as an unterminated string and abort mid-execution."
     },
-    "correct": "C",
+    "correct": "B",
     "distractor_types": {
-      "A": "near-miss",
-      "B": "plausible misconception",
-      "C": "correct",
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
       "D": "clearly wrong"
     }
   },

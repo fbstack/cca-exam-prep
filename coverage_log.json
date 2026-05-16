@@ -37,10 +37,10 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 68,
-      "foundational": 12,
-      "intermediate": 35,
-      "architect": 21,
+      "questions_generated": 77,
+      "foundational": 13,
+      "intermediate": 39,
+      "architect": 25,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",

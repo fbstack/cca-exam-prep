@@ -20,16 +20,6 @@
     }
   },
   {
-    "question_id": "structured_data_exercise_q004",
-    "correct_letter": "C",
-    "correct_explanation": "The stop_sequences parameter triggers on any match of the specified string, so a bash backtick subshell expression like `$(...)` causes premature termination mid-command when the closing backtick is encountered. This leaves the executor with a syntactically incomplete command ending in an unmatched backtick, producing the observed shell errors. The pipeline's lack of post-processing means this truncated output reaches the executor unmodified.",
-    "distractor_explanations": {
-      "A": "The Anthropic API contract explicitly excludes the stop sequence from the returned completion \u2014 the stop string never appears in the response body. The failure mode here isn't SDK non-compliance; the backtick is coming from generated content, not the stop sequence itself.",
-      "B": "Assistant prefill content is not echoed back in the API response \u2014 Claude continues generation from the prefill without returning it. The closing fence would also be caught by the stop sequence before it could appear in output, so this mechanism doesn't produce the observed artifact.",
-      "D": "Newline characters do not render as backticks under any standard terminal or shell configuration. This explanation invents a fictional failure mode unconnected to how stop sequences, shell metacharacters, or process logs actually behave."
-    }
-  },
-  {
     "question_id": "structured_data_exercise_q005",
     "correct_letter": "C",
     "correct_explanation": "Prefilling the assistant turn with the opening fence forces Claude's continuation to begin inside the code block, and the matching stop sequence causes generation to halt exactly at the closing fence\u2014extraction reduces to stripping the known prefix, not parsing unpredictable prose. This creates deterministic extraction boundaries that are structurally immune to model update changes in surrounding language. Downstream executors receive clean command text with no envelope to unwrap and no regex fragility.",
@@ -87,6 +77,16 @@
       "A": "System prompt instructions still operate as directives Claude interprets, not as pre-written output state \u2014 they do not eliminate the structural window before the first output token. A system prompt reduces non-compliance probability but does not provide the same deterministic output-start guarantee as a prefill.",
       "C": "Removing a prefill does not increase prompt token count in any meaningful way \u2014 the prefill appears in the assistant turn, not the prompt, and re-deriving format intent is not a discrete computational cost that scales with volume. This conflates token economics with architectural compliance guarantees.",
       "D": "Benchmark compliance rates do not translate to zero parse failures in production, and the stop sequence only controls where generation ends, not where prose-free output begins. The argument concedes residual failure exists while dismissing the mechanism that eliminates the failure mode entirely."
+    }
+  },
+  {
+    "question_id": "structured_data_exercise_q004",
+    "correct_letter": "B",
+    "correct_explanation": "Stop sequences match any occurrence of the target string in generated output, regardless of context \u2014 Claude has no awareness that the triple-backtick appears inside a comment rather than as a structural delimiter. When Claude generates the ``` string within the heredoc comment, the API immediately halts and returns the truncated response, stripping all subsequent teardown commands. The executor then runs an incomplete script, leaving infrastructure in a partial state.",
+    "distractor_explanations": {
+      "A": "The API does not match stop sequences against prefill content \u2014 prefill is injected directly and treated as already-generated, so stop sequence scanning begins only on tokens Claude actually produces after the prefill.",
+      "C": "When assistant prefill is used, the prefill content does not appear in the API response body, but Claude continues generating from that point and the stop sequence fires normally on any matching tokens Claude produces \u2014 prefill does not suppress stop sequence detection.",
+      "D": "The truncation is occurring at the API level before the executor ever receives the response; a shell heredoc interpretation error would produce a different failure mode (parse error on execution) rather than a silently shortened script."
     }
   }
 ]
