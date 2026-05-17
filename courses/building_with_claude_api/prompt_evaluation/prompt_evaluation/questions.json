@@ -1,0 +1,149 @@
+[
+  {
+    "id": "prompt_evaluation_q001",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "theory",
+    "decision_source": "Choose whether to validate a prompt's reliability through ad-hoc manual testing or an automated evaluation pipeline before shipping to production.",
+    "stem": "A team at an e-commerce company has built a customer support prompt that handles refund requests. During development, they tested it on seven representative examples \u2014 a standard refund, a partial refund, and five common complaint phrasings \u2014 and the outputs looked correct every time. The product manager is pushing to ship before the end of the sprint. What is the strongest argument against deploying on the basis of these seven tests alone?",
+    "options": {
+      "A": "Seven examples is statistically insufficient for significance testing, so the team should at minimum double the manual sample to fourteen before deploying.",
+      "B": "Hand-picked examples systematically exclude the long tail of real user input diversity \u2014 such as multi-currency amounts or non-English requests \u2014 so failures on those inputs will surface in production with no prior warning.",
+      "C": "Playground testing does not replicate production latency or API rate limits, so performance results from manual testing cannot be trusted.",
+      "D": "The prompt should be fine-tuned on a domain-specific dataset before any evaluation is meaningful, because general-purpose prompts are inherently unreliable for support workflows."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "correct",
+      "C": "plausible misconception",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "prompt_evaluation_q002",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational",
+    "type": "lab",
+    "decision_source": "Choose whether to validate a prompt's reliability through ad-hoc manual testing or an automated evaluation pipeline before shipping to production.",
+    "stem": "A team is building a structured data extraction pipeline that parses customer support tickets into JSON with fields for issue_type, refund_amount, and currency. They use an Anthropic client \u2014 initialized the same way as in their lab notebook \u2014 to call the extraction prompt programmatically. After verifying the output looks correct on three manually chosen tickets, a senior engineer argues the pipeline is ready to ship. A junior engineer proposes first running the prompt against fifty labeled tickets and scoring each output against expected field values before deploying. Which outcome best justifies the junior engineer's approach?",
+    "options": {
+      "A": "Running the prompt on fifty tickets lets the team observe variation in how Claude phrases field values, giving them signal to iteratively reword the prompt until outputs sound more consistent.",
+      "B": "Scoring against labeled expected outputs will surface field-level failures \u2014 such as incorrect currency parsing on non-USD amounts \u2014 that manually reviewed cherry-picked tickets would never expose.",
+      "C": "A larger test set allows the team to calculate average token usage per request, which is necessary for cost forecasting before production deployment.",
+      "D": "Testing against fifty tickets increases the chance of triggering a rate limit, which confirms whether the client's retry logic is correctly configured for production traffic levels."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "prompt_evaluation_q003",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Decide whether to iterate on prompt wording based on individual failing examples or based on aggregate evaluation metrics across the full test suite.",
+    "stem": "A team maintains a Claude-powered customer support resolution agent that classifies incoming tickets into 12 routing categories. A QA engineer notices the model misroutes 'billing dispute after account closure' tickets and rewrites the system prompt to handle that case explicitly. After deploying the change, a product manager reports that 'account closure without billing dispute' tickets \u2014 previously routed correctly \u2014 are now landing in the wrong queue at an elevated rate. What process failure led to this regression, and what governance change would prevent it?",
+    "options": {
+      "A": "The engineer should have used a larger model when fixing edge cases, since more capable models are less likely to develop blind spots across categories when a prompt changes.",
+      "B": "The engineer iterated on the prompt based on a single failing example and validated only that example after the fix, without measuring the change's impact across the full ticket distribution; requiring every prompt change to pass an aggregate eval across all routing categories before acceptance would have caught the regression.",
+      "C": "The engineer should have added the failing example as a few-shot demonstration rather than rewriting the system prompt, since few-shot additions affect only the targeted case and leave other routing behavior unchanged.",
+      "D": "The prompt change should have been tested against a held-out sample of 10\u201315 tickets from each category before deployment, which is sufficient to surface regressions while keeping evaluation cost low."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly-wrong"
+    }
+  },
+  {
+    "id": "prompt_evaluation_q004",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate",
+    "type": "lab",
+    "decision_source": "Decide whether to iterate on prompt wording based on individual failing examples or based on aggregate evaluation metrics across the full test suite.",
+    "stem": "A team is building a structured data extraction pipeline that uses the Anthropic SDK client to pull order details from customer emails. They have a scored test suite of 200 emails spanning 8 extraction categories. A developer notices the model fails to extract 'partial shipment' order lines and tweaks the prompt. She runs the revised prompt against the three emails that were failing and confirms all three now extract correctly. She ships the change. Two days later, monitoring shows that 'cancelled order' extractions \u2014 previously 97% accurate \u2014 have dropped to 81%. What is the most precise diagnosis of the engineering failure?",
+    "options": {
+      "A": "The developer validated the fix against too small a sample; running the revised prompt against at least 20\u201330 examples per category before shipping would have been sufficient to catch cross-category regressions.",
+      "B": "The developer should have held out a separate validation subset from the 200-email test suite and measured improvement only on that holdout, rather than using the same examples she observed failing \u2014 otherwise confirmation bias inflates confidence in the fix.",
+      "C": "The developer used single-example confirmation \u2014 verifying only the three previously failing emails \u2014 as the acceptance gate for the prompt change, rather than requiring the revised prompt to meet or exceed aggregate scores across all 8 extraction categories; prompt changes have non-local effects, so confirming the targeted cases cannot detect regressions elsewhere in the distribution.",
+      "D": "The developer evaluated the revised prompt at the default temperature, which introduces output variance; running each validation email multiple times and averaging scores would have revealed instability in the 'cancelled order' category before shipping."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "near-miss",
+      "B": "plausible misconception",
+      "C": "correct",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "prompt_evaluation_q005",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "theory",
+    "decision_source": "Determine how to balance the upfront cost of building an evaluation pipeline against the risk of deploying an under-tested prompt in a cost-sensitive, fast-moving product environment.",
+    "stem": "A startup is launching a Claude-powered customer support resolution agent that handles billing disputes, account cancellations, and refund requests across five product lines. The team has two weeks to ship, and leadership has approved manual spot-testing on a representative sample of twenty tickets. A senior engineer flags that the manual tests cover only the most common dispute type and argues for a three-day delay to build a scored eval pipeline before launch. A product manager counters that reactive patching post-launch is faster and the team can monitor error rates in production dashboards. What is the most architecturally sound response to this disagreement?",
+    "options": {
+      "A": "Accept the product manager's position: production traffic provides more diverse signal than a pre-launch eval suite, and dashboards will surface errors before they compound.",
+      "B": "Launch immediately with all five product lines but add a human review queue for flagged low-confidence responses, treating the queue as a de facto eval signal.",
+      "C": "Launch a scope-limited version covering only the highest-volume, lowest-risk dispute type while the scored eval pipeline is built in parallel, using eval results to gate rollout of remaining dispute categories.",
+      "D": "Delay the full launch by three days, build the complete eval suite across all five product lines, and only then ship \u2014 accepting the deadline slip as justified by the liability surface."
+    },
+    "correct": "C",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "near-miss",
+      "C": "correct",
+      "D": "clearly wrong"
+    }
+  },
+  {
+    "id": "prompt_evaluation_q006",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect",
+    "type": "lab",
+    "decision_source": "Determine how to balance the upfront cost of building an evaluation pipeline against the risk of deploying an under-tested prompt in a cost-sensitive, fast-moving product environment.",
+    "stem": "A team building a structured data extraction pipeline uses an Anthropic SDK client \u2014 initialized identically to the authenticated client in their lab environment \u2014 to extract invoice fields (vendor, amount, due date, line items) from uploaded PDFs. After manual testing on fifteen clean invoices, the PM declares the prompt production-ready and pushes to release. A week after launch, customers report that invoices with multi-currency line items and split payment terms are returning structurally valid but semantically incorrect extractions \u2014 wrong amounts attributed to wrong vendors. The errors were not caught pre-launch. What was the primary architectural failure that allowed these errors to reach production?",
+    "options": {
+      "A": "The SDK client was not configured with a retry policy, so transient API errors during extraction silently produced partial outputs that were logged as successful.",
+      "B": "The team relied on manual spot-testing against a homogeneous sample that did not cover structurally complex document variants, skipping a scored eval pipeline that would have exposed edge-case extraction failures before rollout.",
+      "C": "The extraction prompt lacked explicit XML tag delimiters for each field, causing Claude to produce outputs that passed format validation but encoded field values ambiguously.",
+      "D": "The team should have fine-tuned the model on their invoice corpus before deploying; a general-purpose prompt cannot reliably handle domain-specific document structures at production scale."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "clearly wrong",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "plausible misconception"
+    }
+  },
+  {
+    "id": "prompt_evaluation_q007",
+    "domain": "Context Management",
+    "difficulty": "intermediate",
+    "type": "theory",
+    "decision_source": "Choose an appropriate model and max_tokens ceiling",
+    "stem": "A customer support platform uses a multi-turn Claude pipeline where each conversation turn appends the full ticket history, the classification prompt, and a grading rubric to the context window. After 8\u201310 turns, the team observes that classification accuracy drops and the model begins referencing stale ticket details from early in the conversation. The context window is approaching its limit, and the infrastructure team reports that per-request token costs have tripled compared to single-turn interactions. What is the most architecturally sound approach to restore accuracy and control token costs without discarding relevant conversation state?",
+    "options": {
+      "A": "Increase the max_tokens ceiling on responses so the model has more room to reason through the full ticket history before classifying.",
+      "B": "Compress earlier turns into a structured summary appended at the top of the context, retaining only the most recent raw turns and the classification prompt within a tightly bounded token budget.",
+      "C": "Switch to a larger frontier model with a higher context limit so the full conversation history fits without truncation.",
+      "D": "Move the grading rubric out of the context window entirely and apply it as a post-processing filter on raw outputs, freeing tokens for conversation history."
+    },
+    "correct": "B",
+    "distractor_types": {
+      "A": "plausible misconception",
+      "B": "correct",
+      "C": "near-miss",
+      "D": "clearly wrong"
+    }
+  }
+]

@@ -1,0 +1,55 @@
+[
+  {
+    "decision": "Choose whether to validate a prompt's reliability through ad-hoc manual testing or an automated evaluation pipeline before shipping to production.",
+    "context": "A team has written a customer-support prompt that handles refund requests. It works correctly on the five examples they tested in the playground. They need to decide whether to deploy it or invest time building a test harness before launch.",
+    "options": [
+      "Deploy after confirming the prompt works on a handful of hand-picked examples",
+      "Run the prompt against a curated test set with expected outputs and score it programmatically before any deploy"
+    ],
+    "correct": "Option B: automated evaluation against a scored test set. Manual spot-checking cannot surface the long tail of edge-case inputs real users will send, so failures surface in production instead of development.",
+    "constraint": "The prompt will be exposed to uncontrolled real-world input diversity; subjective spot-checking cannot enumerate edge cases systematically.",
+    "failure_mode": "Prompt silently regresses on unexpected input patterns \u2014 e.g., multi-currency refund amounts or non-English requests \u2014 that were never in the manual test set, causing incorrect or incoherent responses in production with no early warning signal.",
+    "domain": "Prompt Engineering",
+    "difficulty": "foundational"
+  },
+  {
+    "decision": "Decide whether to iterate on prompt wording based on individual failing examples or based on aggregate evaluation metrics across the full test suite.",
+    "context": "An engineer notices Claude misclassifies a specific edge-case input and rewrites the prompt to fix it. After the fix the overall eval score drops because the change hurt performance on a different class of inputs. They must decide how to govern their iteration loop.",
+    "options": [
+      "Tweak the prompt whenever a specific example fails and re-test that example to confirm the fix",
+      "Require every prompt change to be evaluated against the full scored test suite before it is accepted, using aggregate metrics as the acceptance gate"
+    ],
+    "correct": "Option B: aggregate metric gating. Fixing individual examples without measuring impact across the full distribution causes prompt regression \u2014 solving one failure while silently introducing others.",
+    "constraint": "Prompt changes have non-local effects; improving behavior on one class of inputs routinely degrades another class unless the full distribution is measured.",
+    "failure_mode": "Prompt whack-a-mole: each targeted tweak fixes the visible failing case but regresses a previously passing class, resulting in a prompt whose aggregate accuracy drifts downward over successive 'fixes' with no visibility until production complaints accumulate.",
+    "domain": "Prompt Engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "decision": "Determine how to balance the upfront cost of building an evaluation pipeline against the risk of deploying an under-tested prompt in a cost-sensitive, fast-moving product environment.",
+    "context": "A startup is building a legal-document summarization feature. The team is under pressure to ship in two weeks. Building a graded eval suite will take three days and require paying for additional API calls across hundreds of test documents. Leadership wants to ship with basic manual testing to hit the deadline.",
+    "options": [
+      "Ship with manual spot-testing to meet the deadline and patch issues reactively after launch",
+      "Delay launch by three days to build and run a scored evaluation pipeline covering diverse document types",
+      "Ship a limited beta with narrow scope (one document type only) immediately while the eval pipeline is built in parallel before full rollout"
+    ],
+    "correct": "Option C: scope-limited beta with parallel eval build. This meets the delivery pressure without abandoning reliability guarantees for the full production surface, and the eval pipeline gates the broader rollout rather than being skipped entirely.",
+    "constraint": "Legal summarization errors carry legal liability and reputational risk disproportionate to the time saved by skipping evaluation; yet a hard deadline prevents full pre-launch coverage. Restricting scope limits the blast radius while preserving the eval investment.",
+    "failure_mode": "Option A causes silent hallucination on complex multi-party contracts or jurisdictions not covered in manual tests, resulting in legally incorrect summaries shipped to paying customers. Reactive patching after a legal complaint is far more expensive than the three-day eval investment, and the reputational damage may be unrecoverable for an early-stage product.",
+    "domain": "Prompt Engineering",
+    "difficulty": "architect"
+  },
+  {
+    "decision": "Choose an appropriate model and max_tokens ceiling for evaluation pipeline API calls when running hundreds of test cases to control cost without sacrificing scoring accuracy.",
+    "context": "An engineering team has built a 500-case eval suite that calls Claude to both generate answers and to grade them. They are deciding which model to use for each role and what token ceiling to set, knowing the pipeline runs nightly and costs directly affect the team's infrastructure budget.",
+    "options": [
+      "Use the largest available model with a high max_tokens cap for both generation and grading to maximize accuracy",
+      "Use a smaller, faster model (e.g., Haiku) for generation smoke tests and reserve a larger model only for grading complex outputs, with a tuned max_tokens per role"
+    ],
+    "correct": "Option B: tiered model selection with role-appropriate token caps. Grading simple classification tasks does not require frontier model capacity; using Haiku for bulk generation and a mid-tier model for nuanced grading reduces cost by 80-90% without meaningful accuracy loss on well-defined eval criteria.",
+    "constraint": "Eval pipelines run repeatedly across the full test suite; per-call cost multiplies across hundreds of cases and nightly runs, making model selection and token budgeting a first-order economic decision rather than a one-off prompt choice.",
+    "failure_mode": "Using the largest model with uncapped max_tokens for all 500 eval cases causes per-run costs that exceed the team's budget within days, leading to eval runs being skipped or throttled \u2014 which defeats the purpose of systematic evaluation and recreates the spot-testing trap the pipeline was built to avoid.",
+    "domain": "Context Management",
+    "difficulty": "intermediate"
+  }
+]

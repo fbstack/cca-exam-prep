@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-15",
+  "last_updated": "2026-05-16",
   "exam_format": {
     "total_questions": 60,
     "time_minutes": 120,
@@ -37,10 +37,10 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 77,
-      "foundational": 13,
-      "intermediate": 39,
-      "architect": 25,
+      "questions_generated": 83,
+      "foundational": 15,
+      "intermediate": 41,
+      "architect": 27,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
@@ -48,7 +48,8 @@
         "system_prompts_exercise",
         "temperature",
         "structured_data",
-        "structured_data_exercise"
+        "structured_data_exercise",
+        "prompt_evaluation"
       ]
     },
     "Tool Design & MCP": {
@@ -63,9 +64,9 @@
     "Context Management": {
       "exam_weight": 0.15,
       "est_exam_questions": 9,
-      "questions_generated": 22,
+      "questions_generated": 23,
       "foundational": 5,
-      "intermediate": 6,
+      "intermediate": 7,
       "architect": 11,
       "lessons_covered": [
         "being_clear_and_direct",
@@ -73,7 +74,8 @@
         "making_api_calls",
         "multi_turn_conversations",
         "chat_exercise",
-        "structured_data"
+        "structured_data",
+        "prompt_evaluation"
       ]
     }
   }

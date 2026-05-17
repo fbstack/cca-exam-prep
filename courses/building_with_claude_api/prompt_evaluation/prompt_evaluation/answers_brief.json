@@ -1,0 +1,72 @@
+[
+  {
+    "question_id": "prompt_evaluation_q001",
+    "correct_letter": "B",
+    "correct_explanation": "Hand-picked test sets introduce selection bias \u2014 the team chose examples they already understood, which means the prompt was never exposed to the long tail of real-world variation. Edge cases like multi-currency inputs, misspellings, or non-English requests represent exactly the inputs most likely to cause failures, and none of those failure modes can surface before production if they were never tested. This is the core argument for automated evaluation pipelines: they force coverage of input diversity rather than relying on developer intuition.",
+    "distractor_explanations": {
+      "A": "Doubling to fourteen still uses the same hand-picked sampling method, so it inherits the identical selection bias. The problem is not sample size arithmetic \u2014 it is that manual curation structurally excludes unknown failure modes.",
+      "C": "Latency and rate limits are infrastructure concerns, not prompt reliability concerns. This conflates deployment performance with the correctness of the prompt's outputs, which is a separate evaluation dimension.",
+      "D": "Fine-tuning is not a prerequisite for meaningful prompt evaluation \u2014 general-purpose models are routinely deployed for support workflows without fine-tuning. This answer introduces an unjustified requirement that sidesteps the actual evaluation gap."
+    }
+  },
+  {
+    "question_id": "prompt_evaluation_q003",
+    "correct_letter": "B",
+    "correct_explanation": "The root failure is single-example iteration: fixing a prompt for one observed failure without measuring distributional impact across all 12 categories. Prompt changes that clarify one decision boundary routinely shift others, so a regression in a related category ('account closure without billing dispute') is a predictable consequence. Governance that gates deployment on passing an aggregate eval across the full category set catches cross-category regressions before they reach production.",
+    "distractor_explanations": {
+      "A": "Model capability doesn't prevent prompt-induced regressions; a more capable model still faithfully follows a prompt that conflates related categories. The failure is process (no aggregate eval), not model size.",
+      "C": "Few-shot examples do not act as surgical overrides\u2014they shift the model's learned decision boundary and can alter behavior on semantically adjacent cases just as a system prompt rewrite does. The isolation assumption is false.",
+      "D": "10\u201315 tickets per category is arbitrary and statistically underpowered for detecting regressions in low-frequency but high-stakes categories; the governance requirement must be coverage of the full distribution with a defined pass threshold, not a fixed small sample."
+    }
+  },
+  {
+    "question_id": "prompt_evaluation_q005",
+    "correct_letter": "C",
+    "correct_explanation": "Scope-limited launch applies the principle of incremental rollout with eval-gated expansion: you ship real production signal immediately on the lowest-risk surface while building the measurement infrastructure needed to safely unlock higher-risk dispute categories. This directly resolves the tension between deadline pressure and liability by decoupling 'ship something' from 'ship everything untested.' The eval pipeline then becomes the release gate, not an afterthought.",
+    "distractor_explanations": {
+      "A": "Production dashboards measure error rates, not error types\u2014they surface failures only after customers are harmed and cannot distinguish prompt failure from system failure in billing disputes. Treating reactive patching as a testing strategy removes the pre-launch control point entirely on a high-liability domain.",
+      "B": "A human review queue catches individual bad outputs but produces no structured, reproducible signal that can gate future rollout decisions across all five product lines. This is operational triage masquerading as evaluation architecture.",
+      "D": "Building a complete eval suite across all five product lines before any launch inverts the risk calculus: it delays production signal, burns three days on coverage that could be staged, and still doesn't validate the system under real traffic distribution. The deadline slip is accepted without the incremental learning that staged rollout would provide."
+    }
+  },
+  {
+    "question_id": "prompt_evaluation_q006",
+    "correct_letter": "B",
+    "correct_explanation": "The team's test corpus covered only clean, structurally uniform invoices, so multi-currency and split-payment variants were invisible failure modes until production traffic exposed them. A scored eval pipeline against a representative, edge-case-inclusive dataset would have quantified extraction accuracy on complex documents before rollout. Manual spot-testing on fifteen homogeneous samples is not a substitute for systematic coverage of the input distribution.",
+    "distractor_explanations": {
+      "A": "The failure mode described is silent partial outputs from transient API errors, but the reported symptoms are semantically incorrect extractions on structurally complex documents \u2014 a consistent logic error, not an intermittent connectivity failure. Retry policy absence does not cause wrong vendors to be matched to wrong amounts.",
+      "C": "Missing XML delimiters can introduce ambiguity in output parsing, but the scenario states outputs were 'structurally valid' \u2014 they passed format validation. The failure was semantic incorrectness on complex document types, not a formatting or delimiter problem.",
+      "D": "Fine-tuning is not required to handle domain-specific documents reliably; prompt engineering with a well-constructed eval pipeline is the standard production approach. Asserting that general-purpose prompts categorically fail at scale is a misconception \u2014 the actual failure here was inadequate testing, not model capability."
+    }
+  },
+  {
+    "question_id": "prompt_evaluation_q002",
+    "correct_letter": "B",
+    "correct_explanation": "Automated evaluation against labeled data surfaces systematic field-level failures that manual cherry-picking structurally cannot find \u2014 you only discover what your test set forces you to confront. Non-USD currency parsing is exactly the kind of edge case absent from a small, manually chosen sample, meaning it ships as a silent production bug. Scoring each output against expected values turns subjective 'looks correct' into a measurable pass/fail rate across the distribution of real inputs.",
+    "distractor_explanations": {
+      "A": "Observing phrasing variation is a qualitative signal for prompt refinement, not a reliability metric \u2014 it tells you nothing about whether field values are correct. This conflates stylistic consistency with extraction accuracy.",
+      "C": "Token usage is a valid cost-forecasting input, but it is a side effect of running the evaluation, not its justification. The purpose of scoring against labeled tickets is correctness measurement, not infrastructure budgeting.",
+      "D": "Rate-limit behavior depends on request concurrency and timing, not ticket count, and retry logic testing belongs in infrastructure testing rather than prompt evaluation. This confuses two separate validation concerns."
+    }
+  },
+  {
+    "question_id": "prompt_evaluation_q004",
+    "correct_letter": "C",
+    "correct_explanation": "Prompt changes have non-local effects: rewording instructions for one category alters the model's behavior across the entire output distribution. Using only the three previously failing emails as the acceptance gate is single-example confirmation \u2014 it tells you the targeted cases pass but cannot detect regressions in the other 7 categories. The correct gate is aggregate scores across all 8 categories meeting or exceeding baseline before shipping.",
+    "distractor_explanations": {
+      "A": "Increasing sample size to 20\u201330 examples per category is a better heuristic but still scopes evaluation to the failing category only. The core failure is not insufficient sample size \u2014 it is the absence of full-suite regression testing across all categories.",
+      "B": "Holdout splits guard against data leakage in model training, not prompt evaluation regressions. The failure here is not confirmation bias from reusing observed examples \u2014 it is the complete omission of cross-category evaluation after the change.",
+      "D": "Temperature variance affects output consistency but is not the cause of a 16-point accuracy drop in a previously stable category. The regression is a deterministic consequence of changed prompt semantics, not sampling noise."
+    }
+  },
+  {
+    "question_id": "prompt_evaluation_q007",
+    "correct_letter": "B",
+    "correct_explanation": "Structured summarization of early turns applies a sliding window with compression pattern, preserving semantic state without linear token growth. By collapsing stale turns into a dense summary and keeping only recent raw turns, the model attends to current, relevant context rather than being diluted by distant, low-signal history. This directly addresses both the accuracy degradation from context dilution and the cost problem by bounding tokens per request regardless of conversation length.",
+    "distractor_explanations": {
+      "A": "max_tokens controls output length, not how much of the input context the model can attend to\u2014raising it does nothing to address context window saturation or token cost. This conflates input context limits with output generation capacity.",
+      "C": "Switching to a larger context model defers the problem without solving it: costs scale with token volume regardless of model, and accuracy will degrade again once that larger window fills after more turns. This is architectural avoidance, not architectural improvement.",
+      "D": "Removing the grading rubric from context means the model classifies without access to the evaluation criteria, breaking the classification task itself. Post-processing filters cannot substitute for in-context grounding when the rubric is needed to shape the model's output."
+    }
+  }
+]
