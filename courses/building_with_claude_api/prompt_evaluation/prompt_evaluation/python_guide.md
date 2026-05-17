@@ -7,13 +7,11 @@ No coding background required.
 
 ## What Python is (for complete beginners)
 
-Python is a way of giving instructions to a computer. Think of it like writing a very precise recipe — the computer follows each instruction exactly, in order, with no guesswork. The instructions are written in plain-looking text that humans can read, but the computer can also execute. A **JupyterLab notebook** is a special environment where you write those instructions in chunks called **cells**, run each chunk one at a time, and see the results appear right below each chunk. This makes it ideal for learning, because you can see exactly what each piece of code does before moving on.
+Python is a language for giving instructions to a computer. Think of it like writing a very precise recipe. Each line is one instruction. The computer reads your instructions from top to bottom and does exactly what you say — no more, no less. A **JupyterLab notebook** is a special document where you write those instructions in numbered chunks called **cells**, and you can run each chunk one at a time and see the results right below it. This guide walks through every cell in the lab, one line at a time, so you know exactly what is happening and why.
 
 ---
 
 ## Cell 1: Loading Your Secret API Key
-
-This cell handles the very first thing any program that talks to an external service needs to do: find and load the secret password (the API key) that proves you are allowed to use that service.
 
 ```python
 from dotenv import load_dotenv  # imports the dotenv library to read .env files
@@ -26,79 +24,77 @@ print("API key loaded:", api_key is not None)  # prints True if key found, False
 
 ### What this code does
 
----
-
 **Line 1: `from dotenv import load_dotenv`**
 
-This line brings a specific tool into your workspace so you can use it.
+Let's unpack three new ideas here.
 
-To understand what this means, think of Python as a giant toolbox warehouse. The warehouse holds thousands of specialized tools (called **libraries** or **modules**). Your workspace starts empty — you only bring in the tools you actually need for the job. The act of bringing a tool in is called **importing**.
+A **library** (also called a **package** or **module**) is a collection of pre-written code that someone else built and published so you don't have to write it yourself. Think of it like a toolbox sitting on a shelf. The toolbox is called `dotenv`.
 
-The tool being imported here is called `load_dotenv`. It comes from a library called `dotenv` (pronounced "dot-env"). The `dotenv` library's entire purpose is to read a special file on your computer called `.env` (literally a file named with just a dot and the letters "env"). That file is where you store secret information — like passwords and API keys — without having to write those secrets directly in your code. Writing secrets directly in code is dangerous because code often gets shared; the `.env` file stays private on your machine.
+**Importing** means reaching into that toolbox and pulling out a specific tool so you can use it in your current workspace. Here, the specific tool we are pulling out is called `load_dotenv`.
 
-The word `from` tells Python *which* library to reach into. The word `import` tells Python *what specific tool* to pull out of that library.
+`dotenv` is a library whose one job is to read a special file called `.env` (pronounced "dot env"). A `.env` file is a plain text file you keep on your computer — never shared publicly — that stores secret values like passwords and API keys. By keeping secrets in that file instead of directly in your code, you avoid accidentally sharing your credentials if you post your code online.
+
+So this line says: *"From the dotenv toolbox, bring the load_dotenv tool into my workspace."*
 
 ---
 
 **Line 2: `import os`**
 
-This imports another tool — this one called `os`, which stands for "operating system."
+`os` is a module that comes built into Python — you don't need to install it. It lets Python talk to the **operating system** (Windows, Mac, or Linux) that your computer runs on.
 
-Your **operating system** is the software that runs your computer (Windows, macOS, Linux). The `os` module gives Python a way to talk to the operating system — to ask it questions like "what files are in this folder?" or, in our case, "what is stored in the environment variables?"
+One thing the operating system manages is **environment variables** — a set of named values that live in the background of your computer session, a bit like sticky notes attached to the inside of your computer's memory. Programs can read these notes without you having to type the values out each time.
 
-**Environment variables** are like sticky notes that your operating system keeps posted in its memory. Programs can read these sticky notes to get configuration information — things like where to find a database, what mode to run in, or what the API key is. They are called "environment" variables because they describe the *environment* your program is running in, not the program itself.
-
-We need `os` because, after `load_dotenv` reads the `.env` file, it pastes the contents of that file onto those operating system sticky notes. Then `os` lets us reach up and read those sticky notes.
+This line says: *"Bring in the os toolbox so I can read those sticky notes."*
 
 ---
 
 **Line 3: `load_dotenv()`**
 
-This actually *runs* (or **calls**) the `load_dotenv` tool we imported in Line 1.
+This is the first line that actually *does* something — it runs (or **calls**) the `load_dotenv` tool we imported on Line 1.
 
-A **function** is like a named recipe. When you write just the name followed by parentheses `()`, you are saying "execute this recipe now." The parentheses are the trigger — without them, you are just referring to the recipe by name but not cooking anything.
+A **function** is a named set of instructions you can trigger by writing its name followed by parentheses `()`. Think of it like pressing a button on a machine. The button is labeled `load_dotenv`, and pressing it causes the machine to go find your `.env` file, read the secret values inside it, and paste them into your computer's environment variables (those background sticky notes).
 
-What this function does behind the scenes: it looks for a file called `.env` in the current folder, reads it line by line, and for each line that looks like `KEY=VALUE`, it takes the key and value and posts them as environment variables (those sticky notes we talked about). After this line runs, the API key that was sitting quietly in your `.env` file is now accessible to the rest of your program.
+After this line runs, your API key — which was sitting quietly in your `.env` file — is now available for the next line to find.
 
 ---
 
 **Line 4: `api_key = os.getenv("ANTHROPIC_API_KEY")`**
 
-This line reads one specific sticky note from the operating system's memory and saves what it finds into a **variable** called `api_key`.
+Several new ideas here. Let's take them one at a time.
 
-A **variable** is like a labeled box. You put something inside it and give the box a name, so you can find that thing again later just by using the name. Here, the box is named `api_key`.
+A **variable** is a labeled box that holds a value. You create a box, give it a name, and put something inside. Here, the box is named `api_key`. Whatever value we find will be stored in that box so we can use it later.
 
-The `os.getenv(...)` part is calling a function called `getenv` that lives inside the `os` tool. The dot (`.`) between `os` and `getenv` means "look inside `os` and find the tool called `getenv`." Think of it like saying "in the `os` toolbox, use the `getenv` wrench."
+The `=` sign in Python does not mean "equals" the way it does in math. It means **assignment** — "put the thing on the right side into the box on the left side."
 
-The text inside the parentheses — `"ANTHROPIC_API_KEY"` — is the **argument**, meaning the specific information we are passing to the function. We are telling `getenv`: "go look for the sticky note labeled `ANTHROPIC_API_KEY` and bring back whatever is written on it."
+`os.getenv("ANTHROPIC_API_KEY")` is a function call that reads an environment variable. The dot (`.`) between `os` and `getenv` means "look inside the `os` toolbox and use the `getenv` tool." We hand that tool the name `"ANTHROPIC_API_KEY"` (the name we used in the `.env` file), and it hands back the secret key value that was stored there. If it cannot find any variable with that name, it hands back a special Python value called `None`, which means "nothing."
 
-The `=` sign here does not mean "equals" in a math sense. It means "take whatever is on the right side and store it in the box named on the left side." So after this line runs, the box called `api_key` contains your actual API key string (a long string of random characters like `sk-ant-abc123...`). If the key was not found, the box contains a special Python value called `None`, which means "nothing is here."
+So this line says: *"Look up the environment variable named ANTHROPIC_API_KEY and store whatever you find in the box called api_key."*
 
 ---
 
 **Line 5: `print("API key loaded:", api_key is not None)`**
 
-This line displays a message to the screen so you can see whether the previous step worked.
+`print()` is a built-in Python function that displays a message in the output area below the cell. Whatever you put inside the parentheses gets shown on screen.
 
-`print(...)` is one of Python's most fundamental built-in functions. Whatever you put inside the parentheses gets displayed as text output below the cell.
+`"API key loaded:"` is a **string** — a piece of text. In Python, text is always wrapped in quotation marks.
 
-Here we are printing two things separated by a comma:
-- The text `"API key loaded:"` — this is a **string** (any sequence of characters wrapped in quotes), and it is just a label to make the output readable.
-- `api_key is not None` — this is a **comparison expression**. Python evaluates it and produces either `True` or `False`. It is asking: "is the thing inside the `api_key` box something other than nothing?" If your API key was found, this evaluates to `True`. If it was not found, it evaluates to `False`.
+`api_key is not None` is a **comparison expression** — a question Python evaluates to either `True` or `False`. It asks: "Is the value in the `api_key` box something other than nothing?" If your `.env` file was found and had the key, the answer is `True`. If the key was missing, the answer is `False`.
+
+The print function will display both pieces — the label and the True/False answer — separated by a space.
 
 ### What the output means
 
-You will see either:
-- `API key loaded: True` — your `.env` file was found, it contained the key `ANTHROPIC_API_KEY`, and its value was successfully loaded. You are ready to proceed.
-- `API key loaded: False` — something went wrong. Either the `.env` file does not exist, or it does not contain a line with exactly `ANTHROPIC_API_KEY=your_key_here`. You would need to fix that before continuing.
+You will see something like:
 
-This output matters because everything else in the lab depends on having a valid API key. Checking it here, at the very start, saves you from confusing error messages later.
+```
+API key loaded: True
+```
+
+`True` tells you the key was found successfully and is ready to use. If you see `False`, your `.env` file is missing, misnamed, or does not contain a line called `ANTHROPIC_API_KEY`. You would need to fix that before continuing.
 
 ---
 
-## Cell 2: Creating the API Client
-
-This cell takes the API key you just loaded and uses it to create an **authenticated client** — a dedicated connection object through which all your conversations with Claude will flow.
+## Cell 2: Creating the Connection to Claude
 
 ```python
 from anthropic import Anthropic  # imports the Anthropic SDK client class
@@ -109,45 +105,43 @@ print("Anthropic client ready")       # confirms client was created without erro
 
 ### What this code does
 
----
-
 **Line 1: `from anthropic import Anthropic`**
 
-This imports the main tool from the `anthropic` library — a tool called `Anthropic` (capital A).
+`anthropic` is a library — a toolbox — published by Anthropic (the company that makes Claude). It contains pre-written code that knows how to communicate with Anthropic's servers over the internet.
 
-The `anthropic` library (lowercase) is Anthropic's official **SDK**. An **SDK** stands for "Software Development Kit" — it is a pre-built package of tools that makes it easier to talk to a specific service (in this case, Claude). Without the SDK, you would have to write a lot of complicated code yourself just to send a message and receive a reply. The SDK handles all that complexity for you.
+Inside that toolbox is a specific tool called `Anthropic` (notice it starts with a capital letter). This is a **class** — think of a class as a blueprint or a template. You use the blueprint to build a specific **object**, which is a working thing you can actually interact with. We'll build that object on the next line.
 
-Inside the `anthropic` library is a tool called `Anthropic` (capital A). This is a **class** — think of a class as a blueprint or a template for creating a specific kind of object. In this case, the `Anthropic` class is the blueprint for creating a "client" — a connection manager that knows how to talk to Anthropic's servers.
+This line says: *"From the Anthropic toolbox, bring in the Anthropic blueprint."*
 
 ---
 
 **Line 2: `client = Anthropic(api_key=api_key)`**
 
-This line uses the `Anthropic` blueprint to create an actual client object and stores it in a variable (labeled box) called `client`.
+Here we use the `Anthropic` blueprint to build an actual working object and store it in a variable named `client`.
 
-When you write `Anthropic(...)` with parentheses, you are **instantiating** the class — meaning you are using the blueprint to manufacture a real, working object. Think of the class as a cookie cutter and this line as pressing it into the dough to make an actual cookie.
+Think of `client` as a telephone handset that already has Anthropic's phone number programmed in. Every time you want to talk to Claude, you pick up this handset.
 
-Inside the parentheses, `api_key=api_key` is passing a **named argument**. The part before the `=` (`api_key`) is the name of the slot you are filling in. The part after the `=` (`api_key`) is the variable (labeled box) that holds your actual API key string from Cell 1. The client needs this key so that when it contacts Anthropic's servers, it can prove your identity and that you have permission to use the service.
+`api_key=api_key` is how we hand our secret key to the object during creation. The part on the left (`api_key=`) is the name of the slot the blueprint expects. The part on the right (`api_key`) is our variable box from Cell 1 — the actual key value. This is how Anthropic's servers know you are an authorized user and not a random stranger.
 
-After this line runs, `client` is a fully configured object that can send messages to Claude on your behalf. Every future API call in this notebook will go through this `client` object.
+This line says: *"Build an Anthropic client object using my API key, and store it in the box called client."*
 
 ---
 
 **Line 3: `print("Anthropic client ready")`**
 
-This prints a confirmation message to the screen. If the client creation had failed (for example, due to a network problem or invalid setup), Python would have thrown an **error** before reaching this line, and you would never see this message. Seeing it means everything worked.
+This simply displays a confirmation message. Since Python runs top to bottom and stops if it hits an error, reaching this line means everything above worked without crashing.
 
 ### What the output means
 
-You will see: `Anthropic client ready`
+```
+Anthropic client ready
+```
 
-This tells you the client was created without errors. The key was accepted in the sense that the client object was built successfully. Note that the actual API key is not verified against Anthropic's servers until you make your first real request in Cell 3.
+This one line of output is your green light. The client was built successfully, the API key was accepted, and you are ready to make real calls to Claude.
 
 ---
 
 ## Cell 3: Smoke Test — Sending Your First Message to Claude
-
-This cell sends a simple test message to Claude to confirm that the entire connection — from your computer, through the internet, to Anthropic's servers, and back — is working correctly. In software development, this kind of minimal first test is called a **smoke test** (the name comes from electronics: if you plug something in and it doesn't smoke, the basic circuitry works).
 
 ```python
 response = client.messages.create(  # calls the Messages API; returns a Message object
@@ -161,95 +155,83 @@ print(response.content[0].text)  # response.content is a list of blocks; [0] is 
 
 ### What this code does
 
+This cell is called a **smoke test** — a term borrowed from engineering that means "let's switch it on and check that nothing catches fire." It sends the simplest possible message to Claude to confirm the whole setup works end to end.
+
 ---
 
 **Lines 1–5: `response = client.messages.create(...)`**
 
-This entire block is one statement that sends a message to Claude and waits for a reply. The reply is stored in a variable (labeled box) called `response`.
+This is a single instruction spread across multiple lines for readability. Python knows it is not finished until the parenthesis is closed, so it keeps reading until it finds the matching `)`.
 
-Let's understand the structure before diving into the individual parts. The `client.messages.create(...)` is calling a function that lives deep inside the client object. The dots are like navigating a filing cabinet: go into `client`, then into the `messages` drawer, then use the `create` tool inside that drawer. The parentheses at the end trigger the function.
+`client.messages.create()` means: look inside the `client` object, find the `messages` section, and call the `create` function. This is the function that actually sends a message to Claude over the internet and waits for a reply.
 
-Because this function call spans multiple lines (for readability), Python knows it is all one statement because the opening parenthesis `(` on the first line has not been closed yet — Python keeps reading until it finds the matching `)`.
+Think of it like using a walkie-talkie: you press the button (`create`), speak your message, wait, and Claude talks back.
 
-The function sends your request to Anthropic's servers over the internet and **blocks** (pauses and waits) until Claude has generated a response. Then it packages that response into an object and puts it in the `response` variable.
+The reply from Claude gets stored in a variable called `response`. Think of `response` as a box that now holds everything Claude sent back — not just the text, but also information about how many words were used, which model answered, and so on.
+
+Now let's look at the **parameters** — the settings we passed inside the parentheses:
 
 ---
 
 **`model="claude-haiku-4-5"`**
 
-This is a named argument telling the API *which version of Claude* to use.
+A **parameter** is a setting you pass to a function to control how it behaves, like knobs on a stereo.
 
-Anthropic offers several models, each with different trade-offs between speed, cost, and capability:
-- **Claude Haiku** is the fastest and cheapest — ideal for quick tests and high-volume tasks where speed matters more than maximum quality.
-- **Claude Sonnet** is more capable and produces higher-quality responses, but is slower and costs more per request.
+`model` tells the API which version of Claude to use. `"claude-haiku-4-5"` is Anthropic's fastest and most economical model — good for quick tests and simple tasks. Think of it as the express lane.
 
-For a smoke test (just checking that the connection works), Haiku is the right choice — there is no point spending extra tokens just to verify the plumbing works.
-
----
-
-**`#    model="claude-sonnet-4-5",`**
-
-Lines that start with `#` are **comments**. Python completely ignores them when running the code — they exist only for humans to read. This commented-out line is showing you an *alternative* you could use instead: if you wanted higher-quality responses, you could un-comment this line (remove the `#`) and comment out the Haiku line above it.
+The next line (`# model="claude-sonnet-4-5"`) starts with a `#`, which makes it a **comment**. Python completely ignores anything after a `#` on a line. Comments are notes for humans reading the code. This comment shows you an alternative model you could swap in if you needed higher-quality responses.
 
 ---
 
 **`max_tokens=50`**
 
-This sets a hard ceiling on how long Claude's response can be.
+A **token** is the unit Claude uses to measure text length — roughly one word or part of a word. "Hello" is one token. "unbelievable" might be two or three tokens.
 
-A **token** is the unit Claude uses to measure text — roughly one word or part of a word. The sentence "Hello, how are you?" is about 5 tokens. Setting `max_tokens=50` tells Claude: "stop generating text after 50 tokens, even if you are mid-sentence." This is important for two reasons:
-1. **Cost control** — you are charged based on how many tokens Claude generates. Without a cap, a poorly-worded prompt could cause Claude to generate a very long (and expensive) response.
-2. **Predictability** — in an evaluation pipeline, you want responses of roughly consistent length.
-
-For this smoke test, 50 tokens is plenty for a simple greeting.
+`max_tokens=50` sets a hard ceiling: Claude will not write more than 50 tokens in its reply. This is a safety net. Without it, a misbehaving prompt could cause Claude to write thousands of words and use up your API credit quickly. For a simple "say hello" test, 50 tokens is more than enough.
 
 ---
 
 **`messages=[{"role": "user", "content": "Say hello in one short sentence."}]`**
 
-This defines the conversation you are sending to Claude.
+This is the actual conversation you are sending to Claude. Let's unpack the structure carefully.
 
-The `messages` parameter expects a **list** — an ordered collection of items, like a numbered list on paper. In Python, lists are written with square brackets `[...]`.
+The outer brackets `[...]` create a **list** — an ordered collection of items, like a numbered list on paper.
 
-Inside the list is one item: `{"role": "user", "content": "Say hello in one short sentence."}`. This is a **dictionary** — a lookup table made of key-value pairs, like a mini-form where each field has a label and a value. In Python, dictionaries are written with curly braces `{...}`.
+Inside the list is one item: `{"role": "user", "content": "Say hello in one short sentence."}`. The curly braces `{...}` create a **dictionary** — a lookup table made of paired labels and values, like a mini form where each field has a name and a value.
 
-This particular dictionary has two keys:
-- `"role"` — who is speaking. The value is `"user"`, meaning this message is coming from the human side of the conversation. (The other possible role is `"assistant"`, which would be Claude's side.)
-- `"content"` — what is being said. The value is the actual message text: `"Say hello in one short sentence."`
+This dictionary has two fields:
+- `"role": "user"` — this tells Claude the message is coming from a human user (as opposed to the AI assistant).
+- `"content": "Say hello in one short sentence."` — this is the actual text of the message.
 
-The API requires messages to be formatted this way so it can handle multi-turn conversations (where user and assistant take turns). Even for a single message, you still wrap it in this structure.
+The Claude API is designed around **turns** — alternating messages between a user and an assistant, like a conversation. Even for a single message, you must wrap it in this structure.
 
 ---
 
-**Line 6: `print(response.content[0].text)`**
+**`print(response.content[0].text)`**
 
-This line extracts the actual text of Claude's reply from the response object and prints it.
+After Claude replies, everything is packed into the `response` object. This line digs into that object to find the actual text.
 
-After the API call completes, `response` is a complex object containing lots of information — not just the text, but also usage statistics, the model name, a stop reason, and more. The text of the reply is nested inside it.
+`response.content` is a **list of content blocks**. Claude can theoretically return multiple blocks (text, images, etc.), so the API always gives you a list even if there is only one item.
 
-Let's decode `response.content[0].text` from left to right:
-- `response` — the labeled box holding Claude's full reply object
-- `.content` — go inside `response` and find the part called `content`. This is a **list** (ordered collection) of content blocks. Claude can technically return multiple blocks (for example, text plus an image description), so the API always uses a list even when there is only one block.
-- `[0]` — get the item at position 0 in that list. **Python counts starting from zero**, not one. So `[0]` means "the first item." This is the first (and in this case only) content block.
-- `.text` — go inside that block and get the actual text string.
+`[0]` means "give me the item at position zero." In Python, counting always starts at zero, not one. So position `0` is the first item, position `1` would be the second, and so on.
+
+`.text` pulls out the text property of that first content block — the actual words Claude wrote.
+
+Put together: *"Look in the response, find the list of content blocks, take the first one, and print its text."*
 
 ### What the output means
 
-You will see something like: `Hello! It's great to meet you — I hope you're having a wonderful day!`
+You will see a short greeting from Claude, something like:
 
-The specific wording will vary slightly each time you run it (because Claude has some natural variation in its responses), but you should see a short, friendly greeting. This confirms that:
-- Your API key is valid and accepted by Anthropic's servers
-- The network connection is working
-- The `client` object is properly configured
-- Claude is reachable and responding
+```
+Hello! It's wonderful to meet you today.
+```
 
-If something is wrong, you will see a Python error message instead — usually something about authentication (bad key), network connectivity, or an invalid parameter.
+This confirms the entire pipeline is working: your `.env` file was read, the API key was valid, the request reached Anthropic's servers, Claude processed it, and the reply came back correctly. You are ready to proceed with the lab.
 
 ---
 
-## Cell 4: Installing and Checking Prerequisites
-
-This cell verifies that all the Python tools the rest of the lab depends on are available and working. Think of it as a pre-flight checklist before takeoff.
+## Cell 4: Installing and Verifying Required Modules
 
 ```python
 import sys   # sys gives us access to the Python interpreter info
@@ -267,148 +249,195 @@ print("Environment check complete ✅")
 
 ### What this code does
 
+This cell imports three standard Python modules (all built in — no installation needed) and then prints confirmation messages so you can verify everything loaded correctly.
+
 ---
 
 **Line 1: `import sys`**
 
-This imports the `sys` module, which gives Python access to information about the Python interpreter itself.
+`sys` is a built-in Python module that gives you information about the Python program itself — the interpreter. Think of the **interpreter** as the translator that reads your Python code and turns it into instructions the computer's processor can actually run.
 
-The **Python interpreter** is the program on your computer that reads your Python code and executes it. The `sys` module lets you ask it questions like "what version of Python are you?" or "what operating system are you running on?" Here, we just want to check the version number.
+We import `sys` here mainly to read and display the Python version number on the next few lines.
 
 ---
 
 **Line 2: `import json`**
 
-This imports Python's built-in `json` module.
+**JSON** stands for JavaScript Object Notation. Despite the name, it has nothing to do with JavaScript in practice — it has become a universal format for exchanging structured data between programs and over the internet. Think of it as a very organized, standardized shopping list that both humans and computers can read.
 
-**JSON** stands for JavaScript Object Notation. Despite the name mentioning JavaScript, JSON is a universal format used everywhere in modern software. It is a structured way of writing data that both humans and computers can read — like a very organized, nested shopping list. It looks like this:
+A JSON structure looks like this:
 
 ```json
-{
-  "name": "Alice",
-  "score": 9,
-  "passed": true
-}
+{"name": "Claude", "version": 3, "capable": true}
 ```
 
-Later in this lab, you will ask Claude to respond in JSON format, and you will use this `json` module to parse (read and interpret) those responses.
+The `json` module lets Python read JSON text (convert it into Python dictionaries and lists) and write JSON text (convert Python dictionaries and lists back into that format). This lab uses JSON extensively because we will ask Claude to reply in JSON format so we can reliably extract numeric scores.
 
 ---
 
 **Line 3: `import re`**
 
-This imports Python's built-in `re` module. The `re` stands for **regular expressions**.
+`re` stands for **regular expressions** — a powerful mini-language for searching through text using patterns. Think of it like a very advanced "Find" function in a word processor.
 
-A **regular expression** is a special pattern-matching language. Think of it like a very powerful "find" function — instead of searching for exactly the word "score", you can search for patterns like "any number between 1 and 10" or "any text that appears between curly braces." Later in the lab, `re` will be used to extract scores and JSON blocks from Claude's text responses.
+For example, a regular expression can find "any sequence of digits" or "any word that starts with a capital letter" in a block of text. In this lab, `re` is used to help pull structured scores out of Claude's text responses when JSON parsing alone isn't enough.
 
 ---
 
 **Line 5: `print("Python version:", sys.version)`**
 
-This prints the Python version to the screen.
+`sys.version` is a **property** of the `sys` module — a stored piece of information you can read. It contains a string (text) describing the exact version of Python running.
 
-`sys.version` is like checking a label on the interpreter that says which version it is. The lab requires Python 3.9 or higher (written as `≥ 3.9`). Older versions might not support some of the features used in the code.
+The lab requires Python version 3.9 or higher. This print statement lets you confirm you meet that requirement.
 
 ---
 
-**Lines 8–10: The three `print` statements**
+**Lines 8–10: The three print statements**
 
-These lines confirm that each import succeeded.
+```python
+print("json module ready:", json.__version__ if hasattr(json, '__version__') else 'built-in')
+```
 
-The most interesting one is the middle line:
-`print("json module ready:", json.__version__ if hasattr(json, '__version__') else 'built-in')`
+This line is a single `print` statement with a slightly complex expression inside it. Let's break it down.
 
-This uses a **conditional expression** (also called a ternary expression) — a compact way of writing "if this is true, use this value; otherwise, use that value."
+`hasattr(json, '__version__')` is a Python function that asks: "Does the `json` module have a property called `__version__`?" (Properties with double underscores on both sides are Python's way of storing internal metadata.) It returns `True` or `False`.
 
-Let's break it apart:
-- `hasattr(json, '__version__')` — this checks whether the `json` module has a version attribute. `hasattr` means "has attribute" — it returns `True` or `False`. An **attribute** is a piece of data stored inside an object (accessed with a dot, like `json.__version__`).
-- `if hasattr(json, '__version__') else 'built-in'` — if `json` has a version number, use it; otherwise, use the text `'built-in'`.
-- The whole expression produces whichever value applies, and `print` displays it.
+The structure `A if CONDITION else B` is called a **conditional expression** — a compact way of saying "use A if the condition is true, otherwise use B." Think of it as a one-line decision. Here: if `json` has a version number, print it; if not, print the word `'built-in'` instead.
 
-The reason for this complexity: `json` is a **built-in module**, meaning it comes pre-installed with Python and does not have a traditional version number attribute. The code gracefully handles both possibilities.
+This exists because `json` is built into Python and doesn't always expose a version number — this code handles both cases gracefully.
 
-**Line 10:** `print("re module ready: built-in")` is straightforward — it just confirms `re` is available by printing a message. (Since both `re` and `json` are built-in to Python, if they were missing, the `import` statements above would have already crashed with an error — so reaching these `print` lines means they loaded fine.)
+```python
+print("re module ready: built-in")
+```
 
-**Line 11:** `print("Environment check complete ✅")` prints a final confirmation with a checkmark emoji. Emojis are valid text in Python strings.
+This one is straightforward — it just prints a confirmation message. `re` is always built in, so no version check is needed.
+
+```python
+print("Environment check complete ✅")
+```
+
+A simple final confirmation message. Reaching this line means all three imports worked without error.
 
 ### What the output means
 
 You will see something like:
+
 ```
-Python version: 3.10.0 (default, Oct 5 2021, ...)
+Python version: 3.10.0 (default, ...)
 json module ready: built-in
 re module ready: built-in
 Environment check complete ✅
 ```
 
-The Python version number should start with `3.9` or higher (3.10.0 in this example is fine). The other lines just confirm that the core tools the lab needs are present and importable. If any `import` statement had failed, Python would have stopped with an error message before reaching the print statements.
+The key thing to check is that the Python version shown is 3.9 or higher (3.10, 3.11, 3.12, etc. are all fine). If the version is older, some code in the lab may not work correctly.
 
 ---
 
 ## Glossary
 
-**Argument** — A value you pass into a function when you call it, telling the function what specific thing to work on. In `os.getenv("ANTHROPIC_API_KEY")`, the argument is `"ANTHROPIC_API_KEY"`.
+**API (Application Programming Interface)**
+A set of rules that lets one program talk to another. Here, the Anthropic API lets your Python code send messages to Claude and receive replies — like a waiter who takes your order to the kitchen and brings back what you asked for.
 
-**API (Application Programming Interface)** — A defined way for one program to talk to another. Think of it like a waiter: you tell the waiter (API) what you want, the waiter takes your order to the kitchen (the service), and brings back what you asked for. The Anthropic API is how your code talks to Claude.
+**API key**
+A unique secret string of characters that proves your identity to a service. Like a password, but specifically for programs to use when making API calls. Never share your API key publicly.
 
-**API Key** — A secret string of characters (like a password) that proves to an API that you are authorized to use it. Without it, the service will refuse your requests.
+**Assignment**
+In Python, the `=` sign means "store this value in this variable." It is not a mathematical equality statement.
 
-**Attribute** — A piece of data or a function that belongs to an object, accessed using a dot. For example, `response.content` accesses the `content` attribute of the `response` object.
+**Boolean**
+A value that is either `True` or `False` — nothing else. Named after mathematician George Boole. Used for yes/no decisions in code.
 
-**Block** — In the context of Claude's API response, a content block is one unit of returned content (usually text). A response can contain multiple blocks.
+**Built-in**
+A module or function that comes with Python automatically — you don't need to install it separately.
 
-**Boolean** — A value that is either `True` or `False`. Named after mathematician George Boole. Used in conditions and comparisons.
+**Call (a function)**
+To run a function by writing its name followed by parentheses. Like pressing a button to trigger a machine.
 
-**Built-in module** — A module that comes pre-installed with Python, requiring no additional download. Examples include `os`, `sys`, `json`, and `re`.
+**Class**
+A blueprint or template for creating objects. The `Anthropic` class is a blueprint for creating a client object that knows how to talk to Anthropic's servers.
 
-**Call (a function)** — To execute or run a function by writing its name followed by parentheses `()`.
+**Client**
+In programming, a client is the part of a system that makes requests to a server. Your Python code is the client; Anthropic's servers are the server.
 
-**Class** — A blueprint or template for creating objects. Like a cookie cutter that can produce many identical-but-separate cookies. `Anthropic` is a class; `client` is the object created from it.
+**Comment**
+A note in code that Python ignores. Anything after a `#` on a line is a comment, written for human readers only.
 
-**Client** — In programming, a client is a program (or object) that connects to a service on your behalf. The `client` variable in this lab is the object through which all your API calls flow.
+**Conditional expression**
+A compact one-line decision: `A if CONDITION else B`. Uses A if the condition is true, B if it's false.
 
-**Comment** — Text in code that Python ignores, written for human readers. In Python, comments start with `#`.
+**Dictionary**
+A data structure that stores pairs of labels and values, like a phone book where you look up a name to get a number. In Python, written with curly braces: `{"key": "value"}`.
 
-**Conditional expression** — A compact way to choose between two values based on a condition. Structure: `value_if_true if condition else value_if_false`.
+**dotenv**
+A library that reads `.env` files and loads their contents into environment variables.
 
-**Dictionary** — A lookup table made of key-value pairs. Like a phone book where you look up a name (key) to get a number (value). Written with curly braces `{}` in Python.
+**.env file**
+A plain text file that stores secret configuration values (like API keys) privately on your computer. Never shared publicly or uploaded to code repositories.
 
-**Environment variable** — A piece of configuration data stored by your operating system, like a sticky note in the computer's memory. Programs can read these without having the data written directly in their code.
+**Environment variable**
+A named value stored in the background of your computer's operating system session. Programs can read these values without you typing them into the code directly.
 
-**Function** — A named, reusable set of instructions that you can trigger by calling it. Like a recipe: give it a name, call the name, and the steps execute.
+**Function**
+A named set of instructions you can trigger by writing its name followed by parentheses. Like pressing a labeled button on a machine.
 
-**Import** — Bringing a tool (library or module) into your current workspace so you can use it. Like carrying a tool from the warehouse to your workbench.
+**hasattr()**
+A Python built-in function that checks whether an object has a particular property. Returns `True` or `False`.
 
-**Instantiate** — To create an actual object from a class blueprint. Like pressing a cookie cutter into dough to make a specific cookie.
+**Import**
+The act of bringing a library, module, or specific tool into your current workspace so you can use it.
 
-**JSON (JavaScript Object Notation)** — A structured text format for representing data, readable by both humans and computers. Uses curly braces for objects `{}`, square brackets for lists `[]`, colons to separate keys and values, and commas to separate items.
+**Interpreter**
+The program that reads your Python code and translates it into instructions the computer's processor can run.
 
-**Library / Module / Package** — A collection of pre-written Python tools that you can import and use in your code. The terms are often used interchangeably, though technically: a module is a single file, a package is a folder of modules, and a library is a general term for any reusable code collection.
+**JSON (JavaScript Object Notation)**
+A standardized text format for representing structured data — dictionaries, lists, numbers, and text — that both humans and computers can read and write. Widely used for exchanging data between programs.
 
-**List** — An ordered collection of items, like a numbered list on paper. Written with square brackets `[]` in Python. Items are accessed by their position, with counting starting at 0.
+**Library (also: package, module)**
+A collection of pre-written code that someone has published for others to use. Saves you from having to write common functionality from scratch.
 
-**Named argument** — An argument passed to a function using the format `name=value`, making the code more readable and allowing arguments to be given in any order.
+**List**
+An ordered collection of items in Python, written with square brackets: `[item1, item2, item3]`. Items are accessed by their position number, starting at zero.
 
-**None** — A special Python value that means "nothing" or "no value." Like an empty box. Used when a variable has no meaningful value to hold.
+**max_tokens**
+A parameter that sets a hard ceiling on how many tokens Claude can produce in a single response.
 
-**Object** — A self-contained unit that combines data (attributes) and functionality (methods/functions). The `client` variable is an object. The `response` variable is an object.
+**Model**
+A specific trained version of an AI system. Different models have different capabilities, speeds, and costs. `claude-haiku-4-5` is fast and economical; `claude-sonnet-4-5` is more capable.
 
-**Operating system** — The software that manages your computer's hardware and provides services to programs (Windows, macOS, Linux).
+**Module**
+See "Library." In Python, these words are often used interchangeably, though technically a module is a single file of code and a package is a collection of modules.
 
-**Parsing** — Reading a structured string (like JSON text) and converting it into a usable Python object like a dictionary or list.
+**None**
+A special Python value meaning "nothing" or "no value." Used when a variable exists but has no meaningful content yet.
 
-**Regular expression** — A pattern-matching language used to search for, extract, or replace text based on patterns rather than exact strings. Provided by Python's `re` module.
+**Object**
+A working instance built from a class blueprint. The `client` variable holds an Anthropic object — a fully constructed, ready-to-use thing built from the Anthropic blueprint.
 
-**SDK (Software Development Kit)** — A pre-built package of tools designed to make working with a specific service easier. The `anthropic` library is Anthropic's SDK for Python.
+**Operating system**
+The core software that manages your computer's hardware and runs your programs. Examples: Windows, macOS, Linux.
 
-**Smoke test** — A quick, minimal test to verify that the basic functionality works before investing time in more complex testing. From electronics: if you power something on and it doesn't smoke, the basic circuitry is intact.
+**Parameter**
+A setting you pass to a function to control how it behaves. Like knobs on a piece of equipment.
 
-**String** — A sequence of characters (text) wrapped in quotes. `"Hello"` and `"ANTHROPIC_API_KEY"` are both strings.
+**Print (function)**
+A built-in Python function that displays text or values in the output area below a cell. Used to give feedback about what the code has done.
 
-**Token** — The unit Claude (and other AI language models) use to measure text. Roughly one word or part of a word. Costs, speed, and limits are all measured in tokens.
+**Property**
+A piece of information stored inside a module or object that you can read by writing its name after a dot. For example, `sys.version` is the version property of the `sys` module.
 
-**Variable** — A labeled box that holds a value. You give it a name, store something in it, and refer to it later by that name. In Python, you create a variable by writing `name = value`.
+**Regular expression (re)**
+A pattern-matching mini-language for searching through text. Like an advanced "Find" function that can search for patterns rather than just exact words.
 
-**`=` (assignment operator)** — In Python, a single equals sign means "store the value on the right into the variable on the left." It does *not* mean mathematical equality. To *compare* two values for equality, Python uses `==` (double equals).
+**Smoke test**
+A quick initial test to confirm that a system is basically functional before running more complex tests. If the smoke test passes, you proceed; if it fails, something fundamental is broken.
 
-**`.env` file** — A plain text file (with no name before the dot) used to store secret configuration values like API keys. Read by the `dotenv` library. Should never be shared or committed to version control.
+**String**
+A piece of text in Python, always wrapped in quotation marks (single or double): `"Hello"` or `'Hello'`.
+
+**Token**
+The unit of text that language models like Claude use internally. Roughly one word or part of a word. APIs charge by token and impose limits in tokens, not characters or words.
+
+**Turn**
+One message in a conversation. The Claude API structures conversations as alternating turns: one from the user, one from the assistant, one from the user, and so on.
+
+**Variable**
+A labeled box in Python's memory that holds a value. You create one by writing a name, then `=`, then the value you want to store.

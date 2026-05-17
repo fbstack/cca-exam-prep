@@ -37,10 +37,10 @@
     "Prompt Engineering": {
       "exam_weight": 0.2,
       "est_exam_questions": 12,
-      "questions_generated": 89,
-      "foundational": 17,
-      "intermediate": 43,
-      "architect": 29,
+      "questions_generated": 95,
+      "foundational": 19,
+      "intermediate": 45,
+      "architect": 31,
       "lessons_covered": [
         "being_clear_and_direct",
         "accessing_the_api",
@@ -64,9 +64,9 @@
     "Context Management": {
       "exam_weight": 0.15,
       "est_exam_questions": 9,
-      "questions_generated": 24,
+      "questions_generated": 25,
       "foundational": 5,
-      "intermediate": 8,
+      "intermediate": 9,
       "architect": 11,
       "lessons_covered": [
         "being_clear_and_direct",
